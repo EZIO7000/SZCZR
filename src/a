@@ -1,0 +1,6 @@
+Audio device opened successfully.
+Audio device parameters have been set successfully.
+Init: Buffer size = 15052 frames.
+Init: Significant bits for linear samples = 16
+Audio device has been prepared for use.
+Audio device has been uninitialized.
