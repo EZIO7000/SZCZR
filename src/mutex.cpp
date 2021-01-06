@@ -41,6 +41,8 @@ void processA()
         std::cout << "Could not initialise mutex" << std::endl;
         return;
     }
+    pthread_mutex_lock(mutex.ptr);
+
     key_t key = ftok("shmfile", 65);
     int shmid = shmget(key, 32000000, 0666 | IPC_CREAT);
     unsigned char *str = (unsigned char *)shmat(shmid, (void *)0, 0);
@@ -51,16 +53,19 @@ void processA()
     sentValues[2] = 9;
     sentValues[3] = 9;
     sentValues[4] = 4;
-    std::cout<<"A"<<std::endl;
+
    // pthread_mutex_lock(mutex.ptr);
     std::cout<<"A"<<std::endl;
     memcpy(str, sentValues, 5 * sizeof(int));
+    std::cout<<"A"<<std::endl;
    // pthread_mutex_unlock(mutex.ptr);
     
 
-    sleep(20);
+    //sleep(20);
     shmdt(str);
-    //shared_mutex_close(mutex);
+
+    pthread_mutex_unlock(mutex.ptr);
+    shared_mutex_close(mutex);
 }
 
 void processB()
@@ -71,44 +76,49 @@ void processB()
         std::cout << "Could not initialise mutex" << std::endl;
         return;
     }
+    pthread_mutex_lock(mutex.ptr);
+
     key_t key = ftok("shmfile", 65);
     int shmid = shmget(key, 32000000, 0666 | IPC_CREAT);
     unsigned char *str = (unsigned char *)shmat(shmid, (void *)0, 0);
     int newValues[4];
-    bool windowCreated = false;
+   // bool windowCreated = false;
     int isEmpty = 1;
     int newRows = 0, newCols = 0, newType = 0;
-    char *tmpData = (char *)malloc(32000000);
+   // char *tmpData = (char *)malloc(32000000);
 
    // pthread_mutex_lock(mutex.ptr);
-    memcpy(&newValues, str, 4 * sizeof(int));
+   // memcpy(&newValues, str, 4 * sizeof(int));
    // pthread_mutex_unlock(mutex.ptr);
-    isEmpty = newValues[0];
-    newRows = newValues[1];
-    newCols = newValues[2];
-    newType = newValues[3];
+   // isEmpty = newValues[0];
+   // newRows = newValues[1];
+   // newCols = newValues[2];
+   // newType = newValues[3];
     
    // cv::Mat newframe;
-    int k;
+   // int k;
     
     
     std::cout<<"B"<<std::endl;
        // pthread_mutex_lock(mutex.ptr);
         memcpy(&newValues, str, 4 * sizeof(int));
         std::cout<<"B"<<std::endl;
-        memcpy(tmpData, str + 4 * sizeof(int), 3 * sizeof(unsigned char) * newRows * newCols);
        // pthread_mutex_unlock(mutex.ptr);
-        isEmpty = newValues[0];
-        newRows = newValues[1];
-        newCols = newValues[2];
-        newType = newValues[3];
-        std::cout<<"New Vals:"<<newValues[0]<<"New Vals:"<<newValues[1]<<"New Vals:"<<newValues[2]<<std::endl;
+       // memcpy(tmpData, str + 4 * sizeof(int), 3 * sizeof(unsigned char) * newRows * newCols);
+       // isEmpty = newValues[0];
+       // newRows = newValues[1];
+       // newCols = newValues[2];
+       // newType = newValues[3];
+        std::cout<<"New Vals:"<<newValues[0]<<" New Vals:"<<newValues[1]<<" New Vals:"<<newValues[2]<<std::endl;
         //k=cv::waitKey(1);
         
+    //sleep(20);
     shmdt(str);
     shmctl(shmid, IPC_RMID, NULL);
-    //shared_mutex_close(mutex);
-    //shared_mutex_destroy(mutex);
+
+    pthread_mutex_unlock(mutex.ptr);
+    shared_mutex_close(mutex);
+    shared_mutex_destroy(mutex);
 }
 
 void createProc(void (*function)())
@@ -123,12 +133,12 @@ void createProc(void (*function)())
 int main()
 {
     initSharedMemory();
-    std::cout<<"C"<<std::endl;
+    std::cout<<"main"<<std::endl;
     createProc(processA);
-    std::cout<<"C"<<std::endl;
+    std::cout<<"main"<<std::endl;
     sleep(3);
     createProc(processB);
-    std::cout<<"C"<<std::endl;
+    std::cout<<"main"<<std::endl;
 
     while (wait(NULL) > 0)
     {
