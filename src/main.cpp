@@ -3,6 +3,7 @@
 #include <iostream>
 #include <alsa/asoundlib.h>
 
+
 using namespace std;
 
 int main() {
@@ -14,15 +15,17 @@ int main() {
     char* pcm_name = strdup("plughw:0,0");  // on-board audio jack
     int rate = 48000;
 
-    const uint16_t freq = 1000;	//zmiana zmienia dzwiek
+    const uint16_t freq = 150;
     long unsigned int bufferSize = 4087*4;
     const uint16_t len = bufferSize*16;
     const float_t arg = 2 * 3.141592 * freq / rate;
     uint16_t vals[len];
-
-    for(int i = 0; i < len; i = i + 1) {
-        vals[i] = SHRT_MAX * cos(arg * i / 2);
+    int i = 0;
+    for(i; i < len; i = i + 1) {
+        vals[i] = SHRT_MAX * cos(arg*i);
     }
+
+    
 
     snd_pcm_hw_params_alloca(&hwparams);
 
@@ -62,9 +65,10 @@ int main() {
 
     const void* ptr = (const void*)&vals;
     int err;
-
+for( int z = 0; z<10;z++) {
+    ptr = (const void*)&vals;
     do {
-        ptr = ptr + bufferSize;
+        ptr += bufferSize;
         ret = snd_pcm_writei(pcm_handle,
                 ptr, len);
 
@@ -74,7 +78,6 @@ int main() {
                 << endl;
         }
     } while(ret < 0);
-
-    cout << "Writing data: " << ret << ", " << snd_strerror(ret)
-        << endl;
+}
+    cout << "Writing data: " << ret << ", " << snd_strerror(ret)<< endl;
 }
