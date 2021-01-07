@@ -19,8 +19,8 @@
 #include <sys/shm.h>
 #include <fcntl.h>
 
-#include <fcntl.h>           
-#include <sys/stat.h>        
+#include <fcntl.h>
+#include <sys/stat.h>
 #include <mqueue.h>
 
 #define MSG_SIZE 4096
@@ -39,56 +39,111 @@ void initSharedMemory()
     memcpy(str, sentValues, 4 * sizeof(int));
 }
 
-void processA()
+void processA(mqd_t mqAB, mqd_t mqBA, mq_attr attr)
 {
-
-    
+    char buffer[sizeof(int)];
+    mqAB = mq_open("/queueAtoB", O_WRONLY);
+    mqBA = mq_open("/queueBtoA", O_CREAT | O_RDONLY, 0644, &attr);
 
     key_t key = ftok("shmfile", 65);
     int shmid = shmget(key, 32000000, 0666 | IPC_CREAT);
     unsigned char *str = (unsigned char *)shmat(shmid, (void *)0, 0);
-    int k = 9;
-    while (k<20)
-    {
-    
-    int sentValues[5];
-    sentValues[0] = k; //isEmpty = false - flaga do ozanczenia, ze juz wstawilismy klatke
-    sentValues[1] = 9;
-    sentValues[2] = 9;
-    sentValues[3] = 9;
-    sentValues[4] = 4;
-    k++;
-    std::cout<<"A"<<std::endl;
-    memcpy(str, sentValues, 5 * sizeof(int));
-    std::cout<<"A"<<std::endl;
 
-    
-    sleep(1);
+    int newValues[4];
+    newValues[0] = 0; //isEmpty = false - flaga do ozanczenia, ze juz wstawilismy klatke
+    newValues[1] = 0;
+    newValues[2] = 0;
+    newValues[3] = 0;
+
+
+    memcpy(str, newValues, 4 * sizeof(int));
+
+    memset(buffer, 0, sizeof(int));
+    mq_send(mqAB, buffer, sizeof(int), 0);
+
+    bool zakonczono = false;
+    int a = 0;
+    while (a < 30)
+    {
+        ssize_t bytes_read;
+
+        bytes_read = mq_receive(mqBA, buffer, sizeof(int), NULL);
+
+        if (bytes_read > 0)
+        {
+            if (!strncmp(buffer, "111", strlen("111")))
+            {
+                std::cout << "Odebrana wiadomosc zakonczenia to: " << buffer << std::endl;
+                zakonczono = true;
+            }
+
+            //shared memory receive
+            memcpy(&newValues, str, 4 * sizeof(int));
+            std::cout << "Odczytane przez A: New Vals: " << newValues[0] << " New Vals: " << newValues[1] << std::endl;
+
+            //zamiana danych
+            newValues[0]++;
+            memcpy(str, newValues, 4 * sizeof(int));
+
+            //shared memory send
+            memset(buffer, 0, sizeof(int));
+            mq_send(mqAB, buffer, sizeof(int), 0);
+
+            a++;
+        }
     }
+
     shmdt(str);
+    shmctl(shmid, IPC_RMID, NULL);
 }
 
-void processB()
+void processB(mqd_t mqAB, mqd_t mqBA, mq_attr attr)
 {
-    
+    char buffer[sizeof(int) + 1];
+    mqBA = mq_open("/queueBtoA", O_WRONLY);
+    mqAB = mq_open("/queueAtoB", O_CREAT | O_RDONLY, 0644, &attr);
 
     key_t key = ftok("shmfile", 65);
     int shmid = shmget(key, 32000000, 0666 | IPC_CREAT);
     unsigned char *str = (unsigned char *)shmat(shmid, (void *)0, 0);
     int newValues[4];
+    newValues[0] = 0; //isEmpty = false - flaga do ozanczenia, ze juz wstawilismy klatke
+    newValues[1] = 0;
+    newValues[2] = 0;
+    newValues[3] = 0;
 
-    int isEmpty = 1;
-    int newRows = 0, newCols = 0, newType = 0;
-    
-    
-    std::cout<<"B"<<std::endl;
-        memcpy(&newValues, str, 4 * sizeof(int));
-        std::cout<<"B"<<std::endl;
-        std::cout<<"New Vals:"<<newValues[0]<<" New Vals:"<<newValues[1]<<" New Vals:"<<newValues[2]<<std::endl;
+    bool zakonczono = false;
+    int a = 0;
+    while (a < 30)
+    {
+        ssize_t bytes_read;
 
-    
+        bytes_read = mq_receive(mqAB, buffer, sizeof(int), NULL);
 
-    
+        if (bytes_read > 0)
+        {
+            if (!strncmp(buffer, "111", strlen("111")))
+            {
+                std::cout << "Odebrana wiadomosc zakonczenia to: " << buffer << std::endl;
+                zakonczono = true;
+            }
+
+            //shared memory receive
+            memcpy(&newValues, str, 4 * sizeof(int));
+            std::cout << "Odczytane przez B: New Vals: " << newValues[0] << " New Vals: " << newValues[1] << std::endl;
+
+            //zamiana danych
+            newValues[1]++;
+            memcpy(str, newValues, 4 * sizeof(int));
+
+            //shared memory send
+            memset(buffer, 0, sizeof(int));
+            mq_send(mqBA, buffer, sizeof(int), 0);
+
+            a++;
+        }
+    }
+
     shmdt(str);
     shmctl(shmid, IPC_RMID, NULL);
 }
@@ -104,43 +159,50 @@ void createProc(void (*function)())
 
 int main()
 {
-    // INSTRUKCJA DO ODPALENIA 
+    // INSTRUKCJA DO ODPALENIA
     // g++ src/MsgQue.cpp -pthread -o MsgQue  -lstdc++ -pthread -lrt
     // ./MsgQue
 
-    mqd_t mqdes =  mq_open("/msgque",O_RDWR);
+    //mqd_t mqdes = mq_open("/msgque", O_RDWR);
 
     initSharedMemory();
 
-    std::cout<<"main"<<std::endl;
+    mqd_t mqAB;              // message queue
+    mqd_t mqBA;
+    /*struct*/ mq_attr attr; // message attributes
+
+    attr.mq_flags = 0;
+    attr.mq_maxmsg = 10;
+    attr.mq_msgsize = sizeof(int);
+    attr.mq_curmsgs = 0;
+
+    //std::cout << "main" << std::endl;
     //createProc(processA);
 
     //creating new process
     if (fork() == 0)
     {
-        processA();
+        processA(mqAB, mqBA, attr);
         exit(0);
     }
 
-    std::cout<<"main"<<std::endl;
+    //std::cout << "main" << std::endl;
     sleep(3);
     //createProc(processB);
 
     //creating new process
     if (fork() == 0)
     {
-        processB();
+        processB(mqAB, mqBA, attr);
         exit(0);
     }
 
-    std::cout<<"main"<<std::endl;
+    //std::cout << "main" << std::endl;
 
     while (wait(NULL) > 0)
     {
-        std::cout<<"a";
+        //std::cout << "a";
     }
-    
-    ret = pthread_spin_destroy(&lock);
 
     return 0;
 }
