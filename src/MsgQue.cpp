@@ -19,6 +19,10 @@
 #include <sys/shm.h>
 #include <fcntl.h>
 
+#include <fcntl.h>           
+#include <sys/stat.h>        
+#include <mqueue.h>
+
 #define MSG_SIZE 4096
 
 void initSharedMemory()
@@ -101,13 +105,10 @@ void createProc(void (*function)())
 int main()
 {
     // INSTRUKCJA DO ODPALENIA 
-    // g++ src/SpinLock.cpp -pthread -o SpinLock  -lstdc++ -pthread -lrt
-    // ./SpinLock
+    // g++ src/MsgQue.cpp -pthread -o MsgQue  -lstdc++ -pthread -lrt
+    // ./MsgQue
 
-    pthread_spinlock_t lock;
-    int pshared;
-    int ret;
-    ret = pthread_spin_init(&lock, pshared);
+    mqd_t mqdes =  mq_open("/msgque",O_RDWR);
 
     initSharedMemory();
 
