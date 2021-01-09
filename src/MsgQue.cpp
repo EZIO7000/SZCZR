@@ -48,6 +48,9 @@ void processA(mqd_t mqAB, mqd_t mqBA)
     int shmid = shmget(key, 32000000, 0666 | IPC_CREAT);
     unsigned char *str = (unsigned char *)shmat(shmid, (void *)0, 0);
 
+    mqAB = mq_open("/queueAtoB", O_WRONLY);
+    mqBA = mq_open("/queueBtoA", O_RDONLY);
+
     int newValues[4];
     newValues[0] = 0; //isEmpty = false - flaga do ozanczenia, ze juz wstawilismy klatke
     newValues[1] = 0;
@@ -104,6 +107,10 @@ void processB(mqd_t mqAB, mqd_t mqBA)
     key_t key = ftok("shmfile", 65);
     int shmid = shmget(key, 32000000, 0666 | IPC_CREAT);
     unsigned char *str = (unsigned char *)shmat(shmid, (void *)0, 0);
+
+    mqBA = mq_open("/queueBtoA", O_WRONLY);
+    mqAB = mq_open("/queueAtoB", O_RDONLY);
+    
     int newValues[4];
     newValues[0] = 0; //isEmpty = false - flaga do ozanczenia, ze juz wstawilismy klatke
     newValues[1] = 0;
@@ -181,8 +188,8 @@ int main()
     //creating new process
     if (fork() == 0)
     {
-        mqAB = mq_open("/queueAtoB", O_WRONLY);
-        mqBA = mq_open("/queueBtoA", O_CREAT | O_RDONLY, 0644, &attr);
+        //mqAB = mq_open("/queueAtoB", O_WRONLY);
+        //mqBA = mq_open("/queueBtoA", O_CREAT | O_RDONLY, 0644, &attr);
 
         processA(mqAB, mqBA);
         exit(0);
@@ -195,8 +202,8 @@ int main()
     //creating new process
     if (fork() == 0)
     {
-        mqBA = mq_open("/queueBtoA", O_WRONLY);
-        mqAB = mq_open("/queueAtoB", O_CREAT | O_RDONLY, 0644, &attr);
+        //mqBA = mq_open("/queueBtoA", O_WRONLY);
+        //mqAB = mq_open("/queueAtoB", O_CREAT | O_RDONLY, 0644, &attr);
 
         processB(mqAB, mqBA);
         exit(0);
