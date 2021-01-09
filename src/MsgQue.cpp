@@ -63,7 +63,7 @@ void processA(mqd_t mqAB, mqd_t mqBA, mq_attr attr)
 
     bool zakonczono = false;
     int a = 0;
-    while (a < 30)
+    while (a < 15)
     {
         ssize_t bytes_read;
 
@@ -114,7 +114,7 @@ void processB(mqd_t mqAB, mqd_t mqBA, mq_attr attr)
 
     bool zakonczono = false;
     int a = 0;
-    while (a < 30)
+    while (a < 15)
     {
         ssize_t bytes_read;
 
@@ -178,7 +178,8 @@ int main()
 
     //std::cout << "main" << std::endl;
     //createProc(processA);
-
+    mqBA = mq_open("/queueBtoA", O_CREAT, 0644, &attr);
+    mqAB = mq_open("/queueAtoB", O_CREAT, 0644, &attr);
     //creating new process
     if (fork() == 0)
     {
@@ -203,6 +204,10 @@ int main()
     {
         //std::cout << "a";
     }
+    
+    mq_unlink("/queueBtoA");
+    mq_unlink("/queueAtoB");   
+    std::cout<<std::endl<<"great success";
 
     return 0;
 }

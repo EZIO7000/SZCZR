@@ -22,7 +22,7 @@ int main() {
     uint16_t vals[len];
     int i = 0;
     for(i; i < len; i = i + 1) {
-        vals[i] = SHRT_MAX * cos(arg*i);
+        vals[i] = 100000 * sin(arg*i);// SHRT_MAX ;
     }
 
     
@@ -69,15 +69,16 @@ for( int z = 0; z<10;z++) {
     ptr = (const void*)&vals;
     do {
         ptr += bufferSize;
-        ret = snd_pcm_writei(pcm_handle,
-                ptr, len);
-
+        ret = snd_pcm_writei(pcm_handle, ptr, len);
+        sleep(1);
         if(ret < 0) {
             err = snd_pcm_prepare(pcm_handle);
             cout << "Preparing: " << snd_strerror(err)
                 << endl;
+            
         }
     } while(ret < 0);
+
 }
     cout << "Writing data: " << ret << ", " << snd_strerror(ret)<< endl;
 }
