@@ -39,11 +39,10 @@ void initSharedMemory()
     memcpy(str, sentValues, 4 * sizeof(int));
 }
 
-void processA(mqd_t mqAB, mqd_t mqBA, mq_attr attr)
+//void processA(mqd_t mqAB, mqd_t mqBA, mq_attr attr)
+void processA(mqd_t mqAB, mqd_t mqBA)
 {
     char buffer[sizeof(int)];
-    mqAB = mq_open("/queueAtoB", O_WRONLY);
-    mqBA = mq_open("/queueBtoA", O_CREAT | O_RDONLY, 0644, &attr);
 
     key_t key = ftok("shmfile", 65);
     int shmid = shmget(key, 32000000, 0666 | IPC_CREAT);
@@ -97,11 +96,10 @@ void processA(mqd_t mqAB, mqd_t mqBA, mq_attr attr)
     shmctl(shmid, IPC_RMID, NULL);
 }
 
-void processB(mqd_t mqAB, mqd_t mqBA, mq_attr attr)
+//void processB(mqd_t mqAB, mqd_t mqBA, mq_attr attr)
+void processB(mqd_t mqAB, mqd_t mqBA)
 {
     char buffer[sizeof(int) + 1];
-    mqBA = mq_open("/queueBtoA", O_WRONLY);
-    mqAB = mq_open("/queueAtoB", O_CREAT | O_RDONLY, 0644, &attr);
 
     key_t key = ftok("shmfile", 65);
     int shmid = shmget(key, 32000000, 0666 | IPC_CREAT);
@@ -183,7 +181,10 @@ int main()
     //creating new process
     if (fork() == 0)
     {
-        processA(mqAB, mqBA, attr);
+        mqAB = mq_open("/queueAtoB", O_WRONLY);
+        mqBA = mq_open("/queueBtoA", O_CREAT | O_RDONLY, 0644, &attr);
+
+        processA(mqAB, mqBA);
         exit(0);
     }
 
@@ -194,7 +195,10 @@ int main()
     //creating new process
     if (fork() == 0)
     {
-        processB(mqAB, mqBA, attr);
+        mqBA = mq_open("/queueBtoA", O_WRONLY);
+        mqAB = mq_open("/queueAtoB", O_CREAT | O_RDONLY, 0644, &attr);
+
+        processB(mqAB, mqBA);
         exit(0);
     }
 
