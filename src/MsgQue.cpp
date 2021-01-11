@@ -215,10 +215,10 @@ int ret;
             err = snd_pcm_prepare(pcm_handle);
             std::cout << "Preparing: " << snd_strerror(err)
                 << std::endl;
-            while(err!=0)
-            {   
-                err = snd_pcm_prepare(pcm_handle);  
-            }
+            //while(err!=0)
+           // {   
+            //    err = snd_pcm_prepare(pcm_handle);  
+            //}
             snd_pcm_writei(pcm_handle, ptra, len);
 
             //shared memory send
