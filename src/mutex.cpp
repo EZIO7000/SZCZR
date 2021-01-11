@@ -18,6 +18,9 @@
 #include <stdio.h>
 #include <string.h>
 #include "shared_mutex.h"
+#include <climits>
+#include <alsa/asoundlib.h>
+#include <math.h>
 
 void initSharedMemory()
 {
@@ -25,12 +28,6 @@ void initSharedMemory()
     int shmid = shmget(key, 32000000, 0666 | IPC_CREAT);
     unsigned char *str = (unsigned char *)shmat(shmid, (void *)0, 0);
 
-    int sentValues[4];
-    sentValues[0] = 1; //isEmpty = true
-    sentValues[1] = 0;
-    sentValues[2] = 0;
-    sentValues[3] = 0;
-    memcpy(str, sentValues, 4 * sizeof(int));
 }
 
 void processA()
@@ -47,16 +44,22 @@ void processA()
     int shmid = shmget(key, 32000000, 0666 | IPC_CREAT);
     unsigned char *str = (unsigned char *)shmat(shmid, (void *)0, 0);
     
-    int sentValues[5];
-    sentValues[0] = 9; //isEmpty = false - flaga do ozanczenia, ze juz wstawilismy klatke
-    sentValues[1] = 9;
-    sentValues[2] = 9;
-    sentValues[3] = 9;
-    sentValues[4] = 4;
+
+int rate = 44100;
+const uint16_t freq = 440;
+long unsigned int bufferSize = 4087*4;
+const uint16_t len = bufferSize*16;
+const float_t arg = 2 * 3.141592 * freq / rate;
+uint16_t vals[len];
+int i = 0;
+for(i; i < len; i = i + 1) {
+    vals[i] = SHRT_MAX * sin(arg*i);
+}
+
 
    // pthread_mutex_lock(mutex.ptr);
     std::cout<<"A"<<std::endl;
-    memcpy(str, sentValues, 5 * sizeof(int));
+    memcpy(str, vals, sizeof(vals));
     std::cout<<"A"<<std::endl;
    // pthread_mutex_unlock(mutex.ptr);
     
@@ -81,38 +84,85 @@ void processB()
     key_t key = ftok("shmfile", 65);
     int shmid = shmget(key, 32000000, 0666 | IPC_CREAT);
     unsigned char *str = (unsigned char *)shmat(shmid, (void *)0, 0);
-    int newValues[4];
+    
+
+    int ret;
+
+    snd_pcm_t* pcm_handle;  // device handle
+    snd_pcm_stream_t stream = SND_PCM_STREAM_PLAYBACK;
+    snd_pcm_hw_params_t* hwparams;  // hardware information
+    char* pcm_name = strdup("plughw:0,0");  // on-board audio jack
+    int rate = 44100;
+
+    const uint16_t freq = 440;
+    long unsigned int bufferSize = 4087*4;
+    const uint16_t len = bufferSize*16;
+    const float_t arg = 2 * 3.141592 * freq / rate;
+    uint16_t vals[len];
+    int i = 0;
+    for(i; i < len; i = i + 1) {
+        vals[i] = 10 * sin(arg*i);
+    }
+
+
    // bool windowCreated = false;
     int isEmpty = 1;
     int newRows = 0, newCols = 0, newType = 0;
-   // char *tmpData = (char *)malloc(32000000);
+  
 
-   // pthread_mutex_lock(mutex.ptr);
-   // memcpy(&newValues, str, 4 * sizeof(int));
-   // pthread_mutex_unlock(mutex.ptr);
-   // isEmpty = newValues[0];
-   // newRows = newValues[1];
-   // newCols = newValues[2];
-   // newType = newValues[3];
-    
-   // cv::Mat newframe;
-   // int k;
     
     
     std::cout<<"B"<<std::endl;
        // pthread_mutex_lock(mutex.ptr);
-        memcpy(&newValues, str, 4 * sizeof(int));
-        std::cout<<"B"<<std::endl;
-       // pthread_mutex_unlock(mutex.ptr);
-       // memcpy(tmpData, str + 4 * sizeof(int), 3 * sizeof(unsigned char) * newRows * newCols);
-       // isEmpty = newValues[0];
-       // newRows = newValues[1];
-       // newCols = newValues[2];
-       // newType = newValues[3];
-        std::cout<<"New Vals:"<<newValues[0]<<" New Vals:"<<newValues[1]<<" New Vals:"<<newValues[2]<<std::endl;
-        //k=cv::waitKey(1);
+    memcpy(&vals, str, sizeof(vals));
+    std::cout<<"B"<<std::endl;
+       
         
-    //sleep(20);
+    snd_pcm_hw_params_alloca(&hwparams);
+
+    ret = snd_pcm_open(&pcm_handle, pcm_name, stream, 0);
+    std::cout << "Opening: " << snd_strerror(ret) << std::endl;
+
+    ret = snd_pcm_hw_params_any(pcm_handle, hwparams);
+    std::cout << "Initializing hwparams structure: " << snd_strerror(ret) << std::endl;   
+
+    ret = snd_pcm_hw_params_set_access(pcm_handle, hwparams,
+            SND_PCM_ACCESS_RW_INTERLEAVED);
+    std::cout << "Setting access: " << snd_strerror(ret) << std::endl;
+
+    ret = snd_pcm_hw_params_set_format(pcm_handle, hwparams,
+            SND_PCM_FORMAT_S16_LE);
+    std::cout << "Setting format: " << snd_strerror(ret) << std::endl;
+
+    ret = snd_pcm_hw_params_set_rate(pcm_handle, hwparams,
+            rate, (int)0);
+    std::cout << "Setting rate: " << snd_strerror(ret) << std::endl;
+
+    ret = snd_pcm_hw_params_set_channels(pcm_handle, hwparams, 2); 
+    std::cout << "Setting channels: " << snd_strerror(ret) << std::endl;
+
+    ret = snd_pcm_hw_params_set_periods(pcm_handle, hwparams, 2, 0);
+    std::cout << "Setting periods: " << snd_strerror(ret) << std::endl;
+
+    ret = snd_pcm_hw_params_set_buffer_size_near(pcm_handle, hwparams,
+            &bufferSize);
+    std::cout << "Setting buffer size: " << snd_strerror(ret) << std::endl;
+
+    ret = snd_pcm_hw_params(pcm_handle, hwparams);
+    std::cout << "Applying parameters: " << snd_strerror(ret) << std::endl;
+
+
+int err;
+    const void* ptra = (const void*)&vals;
+    err = snd_pcm_prepare(pcm_handle);
+    std::cout << "Preparing: " << snd_strerror(err)<< std::endl;
+    while(err!=0)
+    {   
+        err = snd_pcm_prepare(pcm_handle);  
+    }
+    snd_pcm_writei(pcm_handle, ptra, len);
+
+
     shmdt(str);
     shmctl(shmid, IPC_RMID, NULL);
 
@@ -129,7 +179,7 @@ void createProc(void (*function)())
         exit(0);
     }
 }
-
+// compile: g++ mutex.cpp shared_mutex.c -pthread -lstdc++ -pthread -lrt -lm -lasound -o mutex.out
 int main()
 {
     initSharedMemory();
