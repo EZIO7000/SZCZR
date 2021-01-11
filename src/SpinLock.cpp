@@ -168,7 +168,7 @@ void createProc(void (*function)())
 int main()
 {
     // INSTRUKCJA DO ODPALENIA 
-    // g++ src/SpinLock.cpp -pthread -o SpinLock  -lstdc++ -pthread -lrt
+    // g++ src/SpinLock.cpp -pthread -o SpinLock  -lstdc++ -pthread -lrt -lasound
     // ./SpinLock
 
     pthread_spinlock_t lock;

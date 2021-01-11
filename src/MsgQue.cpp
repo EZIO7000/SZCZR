@@ -245,7 +245,7 @@ void createProc(void (*function)())
 int main()
 {
     // INSTRUKCJA DO ODPALENIA
-    // g++ src/MsgQue.cpp -pthread -o MsgQue  -lstdc++ -pthread -lrt
+    // g++ src/MsgQue.cpp -pthread -o MsgQue  -lstdc++ -pthread -lrt -lasound
     // ./MsgQue
 
     //mqd_t mqdes = mq_open("/msgque", O_RDWR);

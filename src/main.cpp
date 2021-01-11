@@ -13,16 +13,16 @@ int main() {
     snd_pcm_stream_t stream = SND_PCM_STREAM_PLAYBACK;
     snd_pcm_hw_params_t* hwparams;  // hardware information
     char* pcm_name = strdup("plughw:0,0");  // on-board audio jack
-    int rate = 48000;
+    int rate = 44100;
 
-    const uint16_t freq = 150;
+    const uint16_t freq = 440;
     long unsigned int bufferSize = 4087*4;
     const uint16_t len = bufferSize*16;
     const float_t arg = 2 * 3.141592 * freq / rate;
     uint16_t vals[len];
     int i = 0;
     for(i; i < len; i = i + 1) {
-        vals[i] = 100000 * sin(arg*i);// SHRT_MAX ;
+        vals[i] = SHRT_MAX/2 * sin(arg*i);
     }
 
     
@@ -59,26 +59,111 @@ int main() {
 
     ret = snd_pcm_hw_params(pcm_handle, hwparams);
     cout << "Applying parameters: " << snd_strerror(ret) << endl;
-
-    cout << endl << endl;
-
-
-    const void* ptr = (const void*)&vals;
     int err;
-for( int z = 0; z<10;z++) {
-    ptr = (const void*)&vals;
-    do {
-        ptr += bufferSize;
-        ret = snd_pcm_writei(pcm_handle, ptr, len);
-        sleep(1);
-        if(ret < 0) {
-            err = snd_pcm_prepare(pcm_handle);
+    cout << endl << endl;
+    sleep(2);
+    const void* ptra = (const void*)&vals;
+    err = snd_pcm_prepare(pcm_handle);
             cout << "Preparing: " << snd_strerror(err)
                 << endl;
+    snd_pcm_writei(pcm_handle, ptra, len);
+    sleep(2); ptra+=bufferSize;
+    err = snd_pcm_prepare(pcm_handle);
+            cout << "Preparing: " << snd_strerror(err)
+                << endl;
+    snd_pcm_writei(pcm_handle, ptra, len);
+    sleep(2); ptra+=bufferSize;
+    err = snd_pcm_prepare(pcm_handle);
+            cout << "Preparing: " << snd_strerror(err)
+                << endl;
+    snd_pcm_writei(pcm_handle, ptra, len);
+    sleep(2); ptra+=bufferSize;
+    err = snd_pcm_prepare(pcm_handle);
+            cout << "Preparing: " << snd_strerror(err)
+                << endl;
+    snd_pcm_writei(pcm_handle, ptra, len);
+    sleep(2); ptra+=bufferSize;
+    err = snd_pcm_prepare(pcm_handle);
+            cout << "Preparing: " << snd_strerror(err)
+                << endl;
+    snd_pcm_writei(pcm_handle, ptra, len);
+    sleep(2);ptra+=bufferSize;
+    err = snd_pcm_prepare(pcm_handle);
+            cout << "Preparing: " << snd_strerror(err)
+                << endl;
+    snd_pcm_writei(pcm_handle, ptra, len);
+    sleep(2);ptra+=bufferSize;
+    err = snd_pcm_prepare(pcm_handle);
+            cout << "Preparing: " << snd_strerror(err)
+                << endl;
+    snd_pcm_writei(pcm_handle, ptra, len);
+    sleep(2);ptra+=bufferSize;
+    err = snd_pcm_prepare(pcm_handle);
+            cout << "Preparing: " << snd_strerror(err)
+                << endl;
+    snd_pcm_writei(pcm_handle, ptra, len);
+    sleep(2);ptra+=bufferSize;
+    err = snd_pcm_prepare(pcm_handle);
+            cout << "Preparing: " << snd_strerror(err)
+                << endl;
+    snd_pcm_writei(pcm_handle, ptra, len);
+    sleep(2);ptra+=bufferSize;
+    err = snd_pcm_prepare(pcm_handle);
+            cout << "Preparing: " << snd_strerror(err)
+                << endl;
+    snd_pcm_writei(pcm_handle, ptra, len);
+    sleep(2);ptra+=bufferSize;
+    err = snd_pcm_prepare(pcm_handle);
+            cout << "Preparing: " << snd_strerror(err)
+                << endl;
+    snd_pcm_writei(pcm_handle, ptra, len);
+    sleep(2);ptra+=bufferSize;
+    err = snd_pcm_prepare(pcm_handle);
+            cout << "Preparing: " << snd_strerror(err)
+                << endl;
+    snd_pcm_writei(pcm_handle, ptra, len);
+    sleep(2);ptra+=bufferSize;
+    err = snd_pcm_prepare(pcm_handle);
+            cout << "Preparing: " << snd_strerror(err)
+                << endl;
+    snd_pcm_writei(pcm_handle, ptra, len);
+    sleep(2);ptra+=bufferSize;
+    err = snd_pcm_prepare(pcm_handle);
+            cout << "Preparing: " << snd_strerror(err)
+                << endl;
+    snd_pcm_writei(pcm_handle, ptra, len);
+    sleep(2);ptra+=bufferSize;
+    err = snd_pcm_prepare(pcm_handle);
+            cout << "Preparing: " << snd_strerror(err)
+                << endl;
+    snd_pcm_writei(pcm_handle, ptra, len);
+    sleep(2);ptra+=bufferSize;
+    err = snd_pcm_prepare(pcm_handle);
+            cout << "Preparing: " << snd_strerror(err)
+                << endl;
+    snd_pcm_writei(pcm_handle, ptra, len);
+    sleep(2);ptra+=bufferSize;
+    err = snd_pcm_prepare(pcm_handle);
+            cout << "Preparing: " << snd_strerror(err)
+                << endl;
+    snd_pcm_writei(pcm_handle, ptra, len);
+    
+    
+    
+    const void* ptr = (const void*)&vals;
+    ptr+=bufferSize;
+// for( int z = 0; z<10;z++) {
+//     ptr = (const void*)&vals;
+//     do {
+//         if(ret < 0) {
+//             err = snd_pcm_prepare(pcm_handle);
+//             cout << "Preparing: " << snd_strerror(err)
+//                 << endl;
             
-        }
-    } while(ret < 0);
-
-}
+//         }
+//         //ptr += bufferSize;
+//         ret = snd_pcm_writei(pcm_handle, ptr, len);
+//     } while(ret < 0);
+//}
     cout << "Writing data: " << ret << ", " << snd_strerror(ret)<< endl;
 }
