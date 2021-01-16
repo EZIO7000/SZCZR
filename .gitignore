@@ -1,2 +1,12 @@
 .vscode/launch.json
 .vscode/tasks.json
+src/pcm_min.c
+src/pcm.c
+src/SpinLock
+src/pcm.out
+src/mutex.out
+src/MsgQue
+src/a.out
+src/shared_mutex.o
+.gitignore
+
