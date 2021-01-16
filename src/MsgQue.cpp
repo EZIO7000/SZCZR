@@ -56,7 +56,7 @@ void processA(mqd_t mqAB, mqd_t mqBA)
     mqBA = mq_open("/queueBtoA", O_RDONLY);
 
     int rate = 44100;
-    const uint16_t freq = 440;
+    const uint16_t freq = 250;
     long unsigned int bufferSize = 4087*4;
     const uint16_t len = bufferSize*16;
     const float_t arg = 2 * 3.141592 * freq / rate;
@@ -135,7 +135,7 @@ int ret;
     char* pcm_name = strdup("plughw:0,0");  // on-board audio jack
     int rate = 44100;
 
-    const uint16_t freq = 440;
+    const uint16_t freq = 240;
     long unsigned int bufferSize = 4087*4;
     const uint16_t len = bufferSize*16;
     const float_t arg = 2 * 3.141592 * freq / rate;
@@ -215,10 +215,11 @@ int ret;
             err = snd_pcm_prepare(pcm_handle);
             std::cout << "Preparing: " << snd_strerror(err)
                 << std::endl;
-            //while(err!=0)
-           // {   
-            //    err = snd_pcm_prepare(pcm_handle);  
-            //}
+            while(err!=0)
+            {   
+                err = snd_pcm_prepare(pcm_handle); 
+                //std::cout<<"AA"; 
+            }
             snd_pcm_writei(pcm_handle, ptra, len);
 
             //shared memory send
