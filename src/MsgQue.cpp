@@ -33,6 +33,7 @@ std::chrono::_V2::system_clock::time_point t1;
 std::chrono::_V2::system_clock::time_point t2;
 clock_t clck;
 
+
 #define MSG_SIZE 4096
 
 void initSharedMemory()
@@ -60,17 +61,25 @@ void processA(mqd_t mqAB, mqd_t mqBA)
     long unsigned int bufferSize = 4087*4;
     const uint16_t len = bufferSize*16;
     const float_t arg = 2 * 3.141592 * freq / rate;
-    uint16_t vals[len];
+    //uint16_t vals[len + 1]; //1 na czas rozpoczecia
+    long int vals[len + 1];
     int i = 0;
     for(i; i < len; i = i + 1) {
         vals[i] = SHRT_MAX * sin(arg*i);
     }
 
-
     mqAB = mq_open("/queueAtoB", O_WRONLY);
     mqBA = mq_open("/queueBtoA", O_RDONLY);
 
-
+    //auto startTime = std::chrono::system_clock::now();
+    // startTime = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    std::chrono::time_point<std::chrono::system_clock> startTime = std::chrono::system_clock::now();
+    auto duration = startTime.time_since_epoch();
+    auto nano = std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
+    vals[len] = nano;
+    //clock_t startTime = clock();
+  //  vals[len] = startTime;
+    //std::cout << "Zczytalo czas rozpoczecia: " << vals[len] << std::endl;
     memcpy(str, vals, sizeof(vals));
 
     memset(buffer, 0, sizeof(int));
@@ -83,7 +92,8 @@ void processA(mqd_t mqAB, mqd_t mqBA)
         ssize_t bytes_read;
        // std::cout<<"A"<<std::endl;
         bytes_read = mq_receive(mqBA, buffer, sizeof(int), NULL);
-        clck = clock();
+        //clck = clock();
+    //    startTime = clock();
         t1 = Clock::now();
         if (bytes_read > 0)
         {
@@ -92,6 +102,21 @@ void processA(mqd_t mqAB, mqd_t mqBA)
                 std::cout << "Odebrana wiadomosc zakonczenia to: " << buffer << std::endl;
                 zakonczono = true;
             }
+
+            //startTime = clock();
+        //    startTime = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+            // TU JEST PRZESYLANIE DO PAMIECI WSPOLDZIELONEJ!!!!! i ma byc w tab val takze startTime
+        //    vals[len] = startTime;
+
+            startTime = std::chrono::system_clock::now();
+            auto duration = startTime.time_since_epoch();
+            auto nano = std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
+            vals[len] = nano;
+        //    vals[len] = 100000;
+        //    std::cout << "Czas w A: " << nano << std::endl;
+
+            //std::cout << "Zczytalo czas rozpoczecia: " << vals[len] << std::endl;
+            memcpy(str, vals, sizeof(vals));
 
             //shared memory send
             memset(buffer, 0, sizeof(int));
@@ -118,58 +143,58 @@ void processB(mqd_t mqAB, mqd_t mqBA)
     mqAB = mq_open("/queueAtoB", O_RDONLY);
 
 
-int ret;
+    int ret;
 
-    snd_pcm_t* pcm_handle;  // device handle
-    snd_pcm_stream_t stream = SND_PCM_STREAM_PLAYBACK;
-    snd_pcm_hw_params_t* hwparams;  // hardware information
-    char* pcm_name = strdup("plughw:0,0");  // on-board audio jack
+    // snd_pcm_t* pcm_handle;  // device handle
+    // snd_pcm_stream_t stream = SND_PCM_STREAM_PLAYBACK;
+    // snd_pcm_hw_params_t* hwparams;  // hardware information
+    // char* pcm_name = strdup("plughw:0,0");  // on-board audio jack
     int rate = 44100;
 
     const uint16_t freq = 240;
     long unsigned int bufferSize = 4087*4;
     const uint16_t len = bufferSize*16;
     const float_t arg = 2 * 3.141592 * freq / rate;
-    uint16_t vals[len];
+    //uint16_t vals[len + 1];
+    long int vals[len + 1];
     int i = 0;
     for(i; i < len; i = i + 1) {
         vals[i] = 10 * sin(arg*i);
     }
-
     
+    
+    // snd_pcm_hw_params_alloca(&hwparams);
 
-    snd_pcm_hw_params_alloca(&hwparams);
+    // ret = snd_pcm_open(&pcm_handle, pcm_name, stream, 0);
+    // //std::cout << "Opening: " << snd_strerror(ret) << std::endl;
 
-    ret = snd_pcm_open(&pcm_handle, pcm_name, stream, 0);
-    //std::cout << "Opening: " << snd_strerror(ret) << std::endl;
+    // ret = snd_pcm_hw_params_any(pcm_handle, hwparams);
+    // //std::cout << "Initializing hwparams structure: " << snd_strerror(ret) << std::endl;   
 
-    ret = snd_pcm_hw_params_any(pcm_handle, hwparams);
-    //std::cout << "Initializing hwparams structure: " << snd_strerror(ret) << std::endl;   
+    // ret = snd_pcm_hw_params_set_access(pcm_handle, hwparams,
+    //         SND_PCM_ACCESS_RW_INTERLEAVED);
+    // //std::cout << "Setting access: " << snd_strerror(ret) << std::endl;
 
-    ret = snd_pcm_hw_params_set_access(pcm_handle, hwparams,
-            SND_PCM_ACCESS_RW_INTERLEAVED);
-    //std::cout << "Setting access: " << snd_strerror(ret) << std::endl;
+    // ret = snd_pcm_hw_params_set_format(pcm_handle, hwparams,
+    //         SND_PCM_FORMAT_S16_LE);
+    // //std::cout << "Setting format: " << snd_strerror(ret) << std::endl;
 
-    ret = snd_pcm_hw_params_set_format(pcm_handle, hwparams,
-            SND_PCM_FORMAT_S16_LE);
-    //std::cout << "Setting format: " << snd_strerror(ret) << std::endl;
+    // ret = snd_pcm_hw_params_set_rate(pcm_handle, hwparams,
+    //         rate, (int)0);
+    // //std::cout << "Setting rate: " << snd_strerror(ret) << std::endl;
 
-    ret = snd_pcm_hw_params_set_rate(pcm_handle, hwparams,
-            rate, (int)0);
-    //std::cout << "Setting rate: " << snd_strerror(ret) << std::endl;
+    // ret = snd_pcm_hw_params_set_channels(pcm_handle, hwparams, 2); 
+    // //std::cout << "Setting channels: " << snd_strerror(ret) << std::endl;
 
-    ret = snd_pcm_hw_params_set_channels(pcm_handle, hwparams, 2); 
-    //std::cout << "Setting channels: " << snd_strerror(ret) << std::endl;
+    // ret = snd_pcm_hw_params_set_periods(pcm_handle, hwparams, 2, 0);
+    // //std::cout << "Setting periods: " << snd_strerror(ret) << std::endl;
 
-    ret = snd_pcm_hw_params_set_periods(pcm_handle, hwparams, 2, 0);
-    //std::cout << "Setting periods: " << snd_strerror(ret) << std::endl;
+    // ret = snd_pcm_hw_params_set_buffer_size_near(pcm_handle, hwparams,
+    //         &bufferSize);
+    // //std::cout << "Setting buffer size: " << snd_strerror(ret) << std::endl;
 
-    ret = snd_pcm_hw_params_set_buffer_size_near(pcm_handle, hwparams,
-            &bufferSize);
-    //std::cout << "Setting buffer size: " << snd_strerror(ret) << std::endl;
-
-    ret = snd_pcm_hw_params(pcm_handle, hwparams);
-    //std::cout << "Applying parameters: " << snd_strerror(ret) << std::endl;
+    // ret = snd_pcm_hw_params(pcm_handle, hwparams);
+    // //std::cout << "Applying parameters: " << snd_strerror(ret) << std::endl;
 
     bool zakonczono = false;
     int a = 0;
@@ -188,24 +213,40 @@ int ret;
             }
 
             //shared memory receive
-            memcpy(&vals, str,sizeof(vals));
-            clck = clock() - clck;
+            memcpy(&vals, str, sizeof(vals));
+
+            clock_t startTime = vals[len];
+
+            std::chrono::time_point<std::chrono::system_clock> endTimeTmp = std::chrono::system_clock::now();
+            auto duration = endTimeTmp.time_since_epoch();
+            auto endTime = std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
+            
+            //clck = clock() - clck;
+            //std::cout << "Odczytalo czas rozpoczecia: " << vals[len] << std::endl;
+            //clock_t endTime = clock();
+        //    std::time_t endTime = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+            //std::cout << "Zczytalo czas zakonczenia: " << endTime << std::endl;
             t2 = Clock::now();
-            int err;
-            const void* ptra = (const void*)&vals;
-            err = snd_pcm_prepare(pcm_handle);
+            // int err;
+            // const void* ptra = (const void*)&vals;
+            // err = snd_pcm_prepare(pcm_handle);
             //std::cout << "Preparing: " << snd_strerror(err)
             //    << std::endl;
-            while(err!=0)
-            {   
-                err = snd_pcm_prepare(pcm_handle); 
-                //std::cout<<"AA"; 
-            }
-            snd_pcm_writei(pcm_handle, ptra, len);
-            std::printf("loop nr %i ;%d clicks; %f seconds\n",a,clck,((float)clck)/CLOCKS_PER_SEC);
-            std::cout<<"time measured by better clock on loop "<<a<<": "<<
-            std::chrono::duration_cast<std::chrono::nanoseconds>(t2-t1).count()<<std::endl;
+            // while(err!=0)
+            // {   
+            //     err = snd_pcm_prepare(pcm_handle); 
+            //     //std::cout<<"AA"; 
+            // }
+            // snd_pcm_writei(pcm_handle, ptra, len);
+        //    std::printf("loop nr %i ;%ld clicks; %f seconds\n",a,clck,((float)clck)/CLOCKS_PER_SEC);
+
+        
+        std::printf("loop nr %i ;%ld micorseconds; \n",a,(endTime - startTime));
+        //    std::cout << "start time: " << startTime << "  end time: " << endTime << std::endl;
+        //    std::cout<<"time measured by better clock on loop "<<a<<": "<<
+        //    std::chrono::duration_cast<std::chrono::nanoseconds>(t2-t1).count()<<std::endl;
             //shared memory send
+
             memset(buffer, 0, sizeof(int));
             mq_send(mqBA, buffer, sizeof(int), 0);
 
@@ -244,6 +285,9 @@ int main()
     attr.mq_maxmsg = 10;
     attr.mq_msgsize = sizeof(int);
     attr.mq_curmsgs = 0;
+
+    clock_t startTime = 0;
+    clock_t endTime;
 
     //std::cout << "main" << std::endl;
     //createProc(processA);
