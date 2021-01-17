@@ -26,21 +26,22 @@
 #include <alsa/asoundlib.h>
 #include <cmath>
 #include <climits>
+#include <time.h>
+#include <chrono>
+typedef std::chrono::high_resolution_clock Clock;
+std::chrono::_V2::system_clock::time_point t1;
+std::chrono::_V2::system_clock::time_point t2;
+clock_t clck;
 
 #define MSG_SIZE 4096
 
 void initSharedMemory()
 {
     key_t key = ftok("shmfile", 65);
-    int shmid = shmget(key, 32000000, 0666 | IPC_CREAT);
+    int shmid = shmget(key, 64000000, 0666 | IPC_CREAT);
     unsigned char *str = (unsigned char *)shmat(shmid, (void *)0, 0);
 
-    int sentValues[4];
-    sentValues[0] = 1; //isEmpty = true
-    sentValues[1] = 0;
-    sentValues[2] = 0;
-    sentValues[3] = 0;
-    memcpy(str, sentValues, 4 * sizeof(int));
+   
 }
 
 //void processA(mqd_t mqAB, mqd_t mqBA, mq_attr attr)
@@ -52,9 +53,8 @@ void processA(mqd_t mqAB, mqd_t mqBA)
     int shmid = shmget(key, 32000000, 0666 | IPC_CREAT);
     unsigned char *str = (unsigned char *)shmat(shmid, (void *)0, 0);
 
-    mqAB = mq_open("/queueAtoB", O_WRONLY);
-    mqBA = mq_open("/queueBtoA", O_RDONLY);
-
+    
+    
     int rate = 44100;
     const uint16_t freq = 250;
     long unsigned int bufferSize = 4087*4;
@@ -66,11 +66,9 @@ void processA(mqd_t mqAB, mqd_t mqBA)
         vals[i] = SHRT_MAX * sin(arg*i);
     }
 
-    int newValues[4];
-    newValues[0] = 0; //isEmpty = false - flaga do ozanczenia, ze juz wstawilismy klatke
-    newValues[1] = 0;
-    newValues[2] = 0;
-    newValues[3] = 0;
+
+    mqAB = mq_open("/queueAtoB", O_WRONLY);
+    mqBA = mq_open("/queueBtoA", O_RDONLY);
 
 
     memcpy(str, vals, sizeof(vals));
@@ -83,9 +81,10 @@ void processA(mqd_t mqAB, mqd_t mqBA)
     while (a < 15)
     {
         ssize_t bytes_read;
-
+       // std::cout<<"A"<<std::endl;
         bytes_read = mq_receive(mqBA, buffer, sizeof(int), NULL);
-
+        clck = clock();
+        t1 = Clock::now();
         if (bytes_read > 0)
         {
             if (!strncmp(buffer, "111", strlen("111")))
@@ -93,14 +92,6 @@ void processA(mqd_t mqAB, mqd_t mqBA)
                 std::cout << "Odebrana wiadomosc zakonczenia to: " << buffer << std::endl;
                 zakonczono = true;
             }
-
-            //shared memory receive
-            memcpy(&newValues, str, 4 * sizeof(int));
-            std::cout << "Odczytane przez A: New Vals: " << newValues[0] << " New Vals: " << newValues[1] << std::endl;
-
-            //zamiana danych
-            newValues[0]++;
-            memcpy(str, newValues, 4 * sizeof(int));
 
             //shared memory send
             memset(buffer, 0, sizeof(int));
@@ -150,42 +141,35 @@ int ret;
     snd_pcm_hw_params_alloca(&hwparams);
 
     ret = snd_pcm_open(&pcm_handle, pcm_name, stream, 0);
-    std::cout << "Opening: " << snd_strerror(ret) << std::endl;
+    //std::cout << "Opening: " << snd_strerror(ret) << std::endl;
 
     ret = snd_pcm_hw_params_any(pcm_handle, hwparams);
-    std::cout << "Initializing hwparams structure: " << snd_strerror(ret) << std::endl;   
+    //std::cout << "Initializing hwparams structure: " << snd_strerror(ret) << std::endl;   
 
     ret = snd_pcm_hw_params_set_access(pcm_handle, hwparams,
             SND_PCM_ACCESS_RW_INTERLEAVED);
-    std::cout << "Setting access: " << snd_strerror(ret) << std::endl;
+    //std::cout << "Setting access: " << snd_strerror(ret) << std::endl;
 
     ret = snd_pcm_hw_params_set_format(pcm_handle, hwparams,
             SND_PCM_FORMAT_S16_LE);
-    std::cout << "Setting format: " << snd_strerror(ret) << std::endl;
+    //std::cout << "Setting format: " << snd_strerror(ret) << std::endl;
 
     ret = snd_pcm_hw_params_set_rate(pcm_handle, hwparams,
             rate, (int)0);
-    std::cout << "Setting rate: " << snd_strerror(ret) << std::endl;
+    //std::cout << "Setting rate: " << snd_strerror(ret) << std::endl;
 
     ret = snd_pcm_hw_params_set_channels(pcm_handle, hwparams, 2); 
-    std::cout << "Setting channels: " << snd_strerror(ret) << std::endl;
+    //std::cout << "Setting channels: " << snd_strerror(ret) << std::endl;
 
     ret = snd_pcm_hw_params_set_periods(pcm_handle, hwparams, 2, 0);
-    std::cout << "Setting periods: " << snd_strerror(ret) << std::endl;
+    //std::cout << "Setting periods: " << snd_strerror(ret) << std::endl;
 
     ret = snd_pcm_hw_params_set_buffer_size_near(pcm_handle, hwparams,
             &bufferSize);
-    std::cout << "Setting buffer size: " << snd_strerror(ret) << std::endl;
+    //std::cout << "Setting buffer size: " << snd_strerror(ret) << std::endl;
 
     ret = snd_pcm_hw_params(pcm_handle, hwparams);
-    std::cout << "Applying parameters: " << snd_strerror(ret) << std::endl;
-
-    
-    int newValues[4];
-    newValues[0] = 0; //isEmpty = false - flaga do ozanczenia, ze juz wstawilismy klatke
-    newValues[1] = 0;
-    newValues[2] = 0;
-    newValues[3] = 0;
+    //std::cout << "Applying parameters: " << snd_strerror(ret) << std::endl;
 
     bool zakonczono = false;
     int a = 0;
@@ -194,7 +178,7 @@ int ret;
         ssize_t bytes_read;
 
         bytes_read = mq_receive(mqAB, buffer, sizeof(int), NULL);
-
+       // std::cout<<"B"<<std::endl;
         if (bytes_read > 0)
         {
             if (!strncmp(buffer, "111", strlen("111")))
@@ -205,23 +189,22 @@ int ret;
 
             //shared memory receive
             memcpy(&vals, str,sizeof(vals));
-            std::cout << "Odczytane przez B: New Vals: " << newValues[0] << " New Vals: " << newValues[1] << std::endl;
-
-            //zamiana danych
-            newValues[1]++;
-            memcpy(str, newValues, 4 * sizeof(int));
+            clck = clock() - clck;
+            t2 = Clock::now();
             int err;
             const void* ptra = (const void*)&vals;
             err = snd_pcm_prepare(pcm_handle);
-            std::cout << "Preparing: " << snd_strerror(err)
-                << std::endl;
+            //std::cout << "Preparing: " << snd_strerror(err)
+            //    << std::endl;
             while(err!=0)
             {   
                 err = snd_pcm_prepare(pcm_handle); 
                 //std::cout<<"AA"; 
             }
             snd_pcm_writei(pcm_handle, ptra, len);
-
+            std::printf("time measured: %d clicks, %f seconds\n",clck,((float)clck)/CLOCKS_PER_SEC);
+            std::cout<<"time measured by better clock: "<<
+            std::chrono::duration_cast<std::chrono::nanoseconds>(t2-t1).count()<<std::endl;
             //shared memory send
             memset(buffer, 0, sizeof(int));
             mq_send(mqBA, buffer, sizeof(int), 0);
@@ -277,7 +260,7 @@ int main()
     }
 
     //std::cout << "main" << std::endl;
-    sleep(3);
+    //sleep(3);
     //createProc(processB);
 
     //creating new process
@@ -299,7 +282,5 @@ int main()
     
     mq_unlink("/queueBtoA");
     mq_unlink("/queueAtoB");   
-    std::cout<<std::endl<<"great success";
-
     return 0;
 }
