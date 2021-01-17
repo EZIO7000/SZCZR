@@ -78,7 +78,7 @@ void processA(mqd_t mqAB, mqd_t mqBA)
 
     bool zakonczono = false;
     int a = 0;
-    while (a < 15)
+    while (a < 30)
     {
         ssize_t bytes_read;
        // std::cout<<"A"<<std::endl;
@@ -173,7 +173,7 @@ int ret;
 
     bool zakonczono = false;
     int a = 0;
-    while (a < 15)
+    while (a < 30)
     {
         ssize_t bytes_read;
 
@@ -202,8 +202,8 @@ int ret;
                 //std::cout<<"AA"; 
             }
             snd_pcm_writei(pcm_handle, ptra, len);
-            std::printf("time measured: %d clicks, %f seconds\n",clck,((float)clck)/CLOCKS_PER_SEC);
-            std::cout<<"time measured by better clock: "<<
+            std::printf("loop nr %i ;%d clicks; %f seconds\n",a,clck,((float)clck)/CLOCKS_PER_SEC);
+            std::cout<<"time measured by better clock on loop "<<a<<": "<<
             std::chrono::duration_cast<std::chrono::nanoseconds>(t2-t1).count()<<std::endl;
             //shared memory send
             memset(buffer, 0, sizeof(int));
