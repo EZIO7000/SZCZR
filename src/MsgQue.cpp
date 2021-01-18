@@ -41,8 +41,6 @@ void initSharedMemory()
     key_t key = ftok("shmfile", 65);
     int shmid = shmget(key, 64000000, 0666 | IPC_CREAT);
     unsigned char *str = (unsigned char *)shmat(shmid, (void *)0, 0);
-
-   
 }
 
 //void processA(mqd_t mqAB, mqd_t mqBA, mq_attr attr)
@@ -155,8 +153,7 @@ void processB(mqd_t mqAB, mqd_t mqBA)
     long unsigned int bufferSize = 4087*4;
     const uint16_t len = bufferSize*16;
     const float_t arg = 2 * 3.141592 * freq / rate;
-    //uint16_t vals[len + 1];
-    long int vals[len + 1];
+    uint16_t vals[len];
     int i = 0;
     for(i; i < len; i = i + 1) {
         vals[i] = 10 * sin(arg*i);
@@ -212,10 +209,17 @@ void processB(mqd_t mqAB, mqd_t mqBA)
                 zakonczono = true;
             }
 
-            //shared memory receive
-            memcpy(&vals, str, sizeof(vals));
+            long int valsTmp[len+1];
 
-            clock_t startTime = vals[len];
+            //shared memory receive
+            memcpy(&valsTmp, str, sizeof(valsTmp));
+
+            clock_t startTime = valsTmp[len];
+
+            int i = 0;
+            for(i; i < len; i = i + 1) {
+                vals[i] = valsTmp[i];
+            }
 
             std::chrono::time_point<std::chrono::system_clock> endTimeTmp = std::chrono::system_clock::now();
             auto duration = endTimeTmp.time_since_epoch();
