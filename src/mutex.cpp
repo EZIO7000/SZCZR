@@ -59,6 +59,7 @@ void processA(shared_mutex_t mutexA, shared_mutex_t mutexB)
         vals[i] = SHRT_MAX * sin(arg * i);
     }
 
+    std::cout << "AAAA" << std::endl;
     //petla od tąd
     int loop = 0;
     while (loop < 30)
@@ -69,7 +70,6 @@ void processA(shared_mutex_t mutexA, shared_mutex_t mutexB)
         auto nano = std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
         vals[len] = nano;
         // pthread_mutex_lock(mutex.ptr);
-        std::cout << "A" << std::endl;
         memcpy(str, vals, sizeof(vals));
         std::cout << "A" << std::endl;
         // pthread_mutex_unlock(mutex.ptr);
@@ -116,43 +116,42 @@ void processB(shared_mutex_t mutexA, shared_mutex_t mutexB)
         vals[i] = 10 * sin(arg * i);
     }
 
-    std::cout << "B" << std::endl;
+    std::cout << "BBBB" << std::endl;
     // pthread_mutex_lock(mutex.ptr);
     memcpy(&vals, str, sizeof(vals));
-    std::cout << "B" << std::endl;
 
-    snd_pcm_hw_params_alloca(&hwparams);
+    // snd_pcm_hw_params_alloca(&hwparams);
 
-    ret = snd_pcm_open(&pcm_handle, pcm_name, stream, 0);
-    std::cout << "Opening: " << snd_strerror(ret) << std::endl;
+    // ret = snd_pcm_open(&pcm_handle, pcm_name, stream, 0);
+    // std::cout << "Opening: " << snd_strerror(ret) << std::endl;
 
-    ret = snd_pcm_hw_params_any(pcm_handle, hwparams);
-    std::cout << "Initializing hwparams structure: " << snd_strerror(ret) << std::endl;
+    // ret = snd_pcm_hw_params_any(pcm_handle, hwparams);
+    // std::cout << "Initializing hwparams structure: " << snd_strerror(ret) << std::endl;
 
-    ret = snd_pcm_hw_params_set_access(pcm_handle, hwparams,
-                                       SND_PCM_ACCESS_RW_INTERLEAVED);
-    std::cout << "Setting access: " << snd_strerror(ret) << std::endl;
+    // ret = snd_pcm_hw_params_set_access(pcm_handle, hwparams,
+    //                                    SND_PCM_ACCESS_RW_INTERLEAVED);
+    // std::cout << "Setting access: " << snd_strerror(ret) << std::endl;
 
-    ret = snd_pcm_hw_params_set_format(pcm_handle, hwparams,
-                                       SND_PCM_FORMAT_S16_LE);
-    std::cout << "Setting format: " << snd_strerror(ret) << std::endl;
+    // ret = snd_pcm_hw_params_set_format(pcm_handle, hwparams,
+    //                                    SND_PCM_FORMAT_S16_LE);
+    // std::cout << "Setting format: " << snd_strerror(ret) << std::endl;
 
-    ret = snd_pcm_hw_params_set_rate(pcm_handle, hwparams,
-                                     rate, (int)0);
-    std::cout << "Setting rate: " << snd_strerror(ret) << std::endl;
+    // ret = snd_pcm_hw_params_set_rate(pcm_handle, hwparams,
+    //                                  rate, (int)0);
+    // std::cout << "Setting rate: " << snd_strerror(ret) << std::endl;
 
-    ret = snd_pcm_hw_params_set_channels(pcm_handle, hwparams, 2);
-    std::cout << "Setting channels: " << snd_strerror(ret) << std::endl;
+    // ret = snd_pcm_hw_params_set_channels(pcm_handle, hwparams, 2);
+    // std::cout << "Setting channels: " << snd_strerror(ret) << std::endl;
 
-    ret = snd_pcm_hw_params_set_periods(pcm_handle, hwparams, 2, 0);
-    std::cout << "Setting periods: " << snd_strerror(ret) << std::endl;
+    // ret = snd_pcm_hw_params_set_periods(pcm_handle, hwparams, 2, 0);
+    // std::cout << "Setting periods: " << snd_strerror(ret) << std::endl;
 
-    ret = snd_pcm_hw_params_set_buffer_size_near(pcm_handle, hwparams,
-                                                 &bufferSize);
-    std::cout << "Setting buffer size: " << snd_strerror(ret) << std::endl;
+    // ret = snd_pcm_hw_params_set_buffer_size_near(pcm_handle, hwparams,
+    //                                              &bufferSize);
+    // std::cout << "Setting buffer size: " << snd_strerror(ret) << std::endl;
 
-    ret = snd_pcm_hw_params(pcm_handle, hwparams);
-    std::cout << "Applying parameters: " << snd_strerror(ret) << std::endl;
+    // ret = snd_pcm_hw_params(pcm_handle, hwparams);
+    // std::cout << "Applying parameters: " << snd_strerror(ret) << std::endl;
 
     long int valsTmp[len + 1];
     //pętla jakoś od tąd
@@ -176,15 +175,15 @@ void processB(shared_mutex_t mutexA, shared_mutex_t mutexB)
         auto duration = endTimeTmp.time_since_epoch();
         auto endTime = std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
 
-        int err;
-        const void *ptra = (const void *)&vals;
-        err = snd_pcm_prepare(pcm_handle);
-        std::cout << "Preparing: " << snd_strerror(err) << std::endl;
-        while (err != 0)
-        {
-            err = snd_pcm_prepare(pcm_handle);
-        }
-        snd_pcm_writei(pcm_handle, ptra, len / 4);
+        // int err;
+        // const void *ptra = (const void *)&vals;
+        // err = snd_pcm_prepare(pcm_handle);
+        // std::cout << "Preparing: " << snd_strerror(err) << std::endl;
+        // while (err != 0)
+        // {
+        //     err = snd_pcm_prepare(pcm_handle);
+        // }
+        // snd_pcm_writei(pcm_handle, ptra, len / 4);
 
         std::printf("loop nr i ;%ld micorseconds; \n", /*a,*/ (endTime - startTime));
 
@@ -192,6 +191,11 @@ void processB(shared_mutex_t mutexA, shared_mutex_t mutexB)
         //pthread_mutex_unlock(mutex.ptr);
         pthread_mutex_unlock(mutexA.ptr);
     }
+
+    shared_mutex_close(mutexA);
+    shared_mutex_destroy(mutexA);
+    shared_mutex_close(mutexB);
+    shared_mutex_destroy(mutexB);
 
     shmdt(str);
     shmctl(shmid, IPC_RMID, NULL);
@@ -210,17 +214,17 @@ void createProc(void (*function)())
 // compile: g++ mutex.cpp shared_mutex.c -pthread -lstdc++ -pthread -lrt -lm -lasound -o mutex.out
 int main()
 {
-    shared_mutex_t mutexA = shared_mutex_init("/my-mutex");
+    shared_mutex_t mutexA = shared_mutex_init("/my-mutexA");
     if (mutexA.ptr == NULL)
     {
         std::cout << "Could not initialise mutex" << std::endl;
-        return;
+        //return;
     }
-    shared_mutex_t mutexB = shared_mutex_init("/my-mutex");
+    shared_mutex_t mutexB = shared_mutex_init("/my-mutexB");
     if (mutexB.ptr == NULL)
     {
         std::cout << "Could not initialise mutex" << std::endl;
-        return;
+        //return;
     }
 
     initSharedMemory();
@@ -236,7 +240,7 @@ int main()
     //createProc(processB);
     if (fork() == 0)
     {
-        processA(mutexA, mutexB);
+        processB(mutexA, mutexB);
         exit(0);
     }
     std::cout << "main" << std::endl;
