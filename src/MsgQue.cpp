@@ -11,19 +11,22 @@
 #include <iostream>
 
 #include <sys/types.h>
+#include <sys/wait.h>
+
 #include <stdlib.h>
 
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <fcntl.h>
 
+#include <fcntl.h>
 #include <sys/stat.h>
 #include <mqueue.h>
 
 #include <alsa/asoundlib.h>
 #include <cmath>
 #include <climits>
-
+#include <time.h>
 #include <chrono>
 typedef std::chrono::high_resolution_clock Clock;
 std::chrono::_V2::system_clock::time_point t1;
@@ -33,51 +36,31 @@ clock_t clck;
 
 #define MSG_SIZE 4096
 
-typedef struct shmData
-{
-    uint16_t vals[4087*4*16];
-    long int timer;
-    char a;
-} shm_D;
-
 void initSharedMemory()
-{   
-    shm_unlink("/waga");
-    int fd = shm_open("/waga",O_CREAT | O_RDWR| O_EXCL, S_IRUSR | S_IWUSR);
-    if (fd == -1)
-        perror("cannot create shared memory in init");
-    shm_D *shmp = (shm_D *)mmap(NULL, sizeof(*shmp), PROT_READ | PROT_WRITE, MAP_SHARED,fd,0);
-    if (shmp == MAP_FAILED)
-        perror("MAP FAILED");
-
-   
+{
+    key_t key = ftok("shmfile", 65);
+    int shmid = shmget(key, 64000000, 0666 | IPC_CREAT);
+    unsigned char *str = (unsigned char *)shmat(shmid, (void *)0, 0);
 }
 
 //void processA(mqd_t mqAB, mqd_t mqBA, mq_attr attr)
 void processA(mqd_t mqAB, mqd_t mqBA)
 {
-    std::cout<<"WAAAGAHAI";
     char buffer[sizeof(int)];
 
-    int fd = shm_open("/waga",O_RDWR,0);
-    if (fd == -1)
-        perror("cannot open shared memory in a");
-    
-    shm_D *shmp = (shm_D *)mmap(NULL, sizeof(*shmp), PROT_READ | PROT_WRITE, MAP_SHARED,fd,0);
-        if (shmp == MAP_FAILED)
-        perror("failed to map in A");
+    key_t key = ftok("shmfile", 65);
+    int shmid = shmget(key, 32000000, 0666 | IPC_CREAT);
+    unsigned char *str = (unsigned char *)shmat(shmid, (void *)0, 0);
 
-        
-    std::cout<<"WAA";
-    shmp->a = 'a';
-    std::cout<<shmp->a;
+    
     
     int rate = 44100;
     const uint16_t freq = 250;
     long unsigned int bufferSize = 4087*4;
     const uint16_t len = bufferSize*16;
     const float_t arg = 2 * 3.141592 * freq / rate;
-    uint16_t vals[len];
+    //uint16_t vals[len + 1]; //1 na czas rozpoczecia
+    long int vals[len + 1];
     int i = 0;
     for(i; i < len; i = i + 1) {
         vals[i] = SHRT_MAX * sin(arg*i);
@@ -91,11 +74,11 @@ void processA(mqd_t mqAB, mqd_t mqBA)
     std::chrono::time_point<std::chrono::system_clock> startTime = std::chrono::system_clock::now();
     auto duration = startTime.time_since_epoch();
     auto nano = std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
-    
+    vals[len] = nano;
     //clock_t startTime = clock();
   //  vals[len] = startTime;
     //std::cout << "Zczytalo czas rozpoczecia: " << vals[len] << std::endl;
-    memcpy(shmp->vals, vals, sizeof(vals));
+    memcpy(str, vals, sizeof(vals));
 
     memset(buffer, 0, sizeof(int));
     mq_send(mqAB, buffer, sizeof(int), 0);
@@ -110,10 +93,8 @@ void processA(mqd_t mqAB, mqd_t mqBA)
         //clck = clock();
     //    startTime = clock();
         t1 = Clock::now();
-        std::cout<<"sgh";
         if (bytes_read > 0)
         {
-            std::cout<<"sgh2";
             if (!strncmp(buffer, "111", strlen("111")))
             {
                 std::cout << "Odebrana wiadomosc zakonczenia to: " << buffer << std::endl;
@@ -128,13 +109,13 @@ void processA(mqd_t mqAB, mqd_t mqBA)
             startTime = std::chrono::system_clock::now();
             auto duration = startTime.time_since_epoch();
             auto nano = std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
-           // vals[len-1] = nano;
+            vals[len] = nano;
         //    vals[len] = 100000;
         //    std::cout << "Czas w A: " << nano << std::endl;
-            std::cout<<"sgh";
+
             //std::cout << "Zczytalo czas rozpoczecia: " << vals[len] << std::endl;
-            memcpy(shmp->vals, vals, sizeof(vals));
-            shmp->timer = nano;
+            memcpy(str, vals, sizeof(vals));
+
             //shared memory send
             memset(buffer, 0, sizeof(int));
             mq_send(mqAB, buffer, sizeof(int), 0);
@@ -143,25 +124,21 @@ void processA(mqd_t mqAB, mqd_t mqBA)
         }
     }
 
-    shm_unlink("/waga");
-    //shmctl(shmid, IPC_RMID, NULL);
+    shmdt(str);
+    shmctl(shmid, IPC_RMID, NULL);
 }
 
 //void processB(mqd_t mqAB, mqd_t mqBA, mq_attr attr)
 void processB(mqd_t mqAB, mqd_t mqBA)
 {
     char buffer[sizeof(int) + 1];
-    std::cout<<"HAHA";
-    int fd = shm_open("/waga",O_RDWR,0);
-    if (fd == -1)
-        perror("cannot open shared memory in a");
-    
+
+    key_t key = ftok("shmfile", 65);
+    int shmid = shmget(key, 32000000, 0666 | IPC_CREAT);
+    unsigned char *str = (unsigned char *)shmat(shmid, (void *)0, 0);
+
     mqBA = mq_open("/queueBtoA", O_WRONLY);
     mqAB = mq_open("/queueAtoB", O_RDONLY);
-
-    shm_D *shmp = (shm_D *)mmap(NULL, sizeof(*shmp), PROT_READ | PROT_WRITE, MAP_SHARED,fd,0);
-        if (shmp == MAP_FAILED)
-        perror("MAP FAILED B");
 
 
     int ret;
@@ -177,7 +154,6 @@ void processB(mqd_t mqAB, mqd_t mqBA)
     const uint16_t len = bufferSize*16;
     const float_t arg = 2 * 3.141592 * freq / rate;
     uint16_t vals[len];
-    //long int vals[len];
     int i = 0;
     for(i; i < len; i = i + 1) {
         vals[i] = 10 * sin(arg*i);
@@ -198,7 +174,7 @@ void processB(mqd_t mqAB, mqd_t mqBA)
 
     ret = snd_pcm_hw_params_set_format(pcm_handle, hwparams,
             SND_PCM_FORMAT_S16_LE);
-    std::cout << "Setting format: " << snd_strerror(ret) << std::endl;
+    //std::cout << "Setting format: " << snd_strerror(ret) << std::endl;
 
     ret = snd_pcm_hw_params_set_rate(pcm_handle, hwparams,
             rate, (int)0);
@@ -215,18 +191,16 @@ void processB(mqd_t mqAB, mqd_t mqBA)
     //std::cout << "Setting buffer size: " << snd_strerror(ret) << std::endl;
 
     ret = snd_pcm_hw_params(pcm_handle, hwparams);
-    std::cout << "Applying parameters: " << snd_strerror(ret) << std::endl;
+    //std::cout << "Applying parameters: " << snd_strerror(ret) << std::endl;
 
     bool zakonczono = false;
     int a = 0;
-    std::cout<<"b1";
     while (a < 30)
     {
-        std::cout<<"b2";
         ssize_t bytes_read;
-        std::cout<<"b3";
+
         bytes_read = mq_receive(mqAB, buffer, sizeof(int), NULL);
-        std::cout<<"B"<<std::endl;
+       // std::cout<<"B"<<std::endl;
         if (bytes_read > 0)
         {
             if (!strncmp(buffer, "111", strlen("111")))
@@ -235,11 +209,17 @@ void processB(mqd_t mqAB, mqd_t mqBA)
                 zakonczono = true;
             }
 
+            long int valsTmp[len+1];
+
             //shared memory receive
-            memcpy(vals, shmp->vals, sizeof(vals));
-            std::cout<<"BEEE";
-            clock_t startTime;
-            memcpy(&startTime, &shmp->timer,sizeof(startTime));
+            memcpy(&valsTmp, str, sizeof(valsTmp));
+
+            clock_t startTime = valsTmp[len];
+
+            int i = 0;
+            for(i; i < len; i = i + 1) {
+                vals[i] = valsTmp[i];
+            }
 
             std::chrono::time_point<std::chrono::system_clock> endTimeTmp = std::chrono::system_clock::now();
             auto duration = endTimeTmp.time_since_epoch();
@@ -251,36 +231,17 @@ void processB(mqd_t mqAB, mqd_t mqBA)
         //    std::time_t endTime = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
             //std::cout << "Zczytalo czas zakonczenia: " << endTime << std::endl;
             t2 = Clock::now();
-            int err;
-            //const void* ptra = (const void*)&vals;
+             int err;
+             const void* ptra = (const void*)&vals;
             err = snd_pcm_prepare(pcm_handle);
-            std::cout << "Preparing: " << snd_strerror(err)
-               << std::endl;
-            //ptra+=bufferSize;
-
-            // while(err!=0)
-            // {   
-            //     err = snd_pcm_prepare(pcm_handle); 
-            //     std::cout<<"AA"; 
-            // }
-            // snd_pcm_writei(pcm_handle, vals, len);
-
-            const void* ptr = (const void*)&vals;
-             ptr+=bufferSize;
-            
-                ptr = (const void*)&vals;
-                do {
-                    if(ret < 0) {
-                        err = snd_pcm_prepare(pcm_handle);
-                        std::cout << "Preparing: " << snd_strerror(err)
-                            << std::endl;
-                        
-                    }
-                    //ptr += bufferSize;
-                    ret = snd_pcm_writei(pcm_handle, ptr, len/2);
-                } while(ret < 0);
-            
-
+            //std::cout << "Preparing: " << snd_strerror(err)
+            //   << std::endl;
+            while(err!=0)
+            {   
+                err = snd_pcm_prepare(pcm_handle); 
+                //std::cout<<"AA"; 
+            }
+            snd_pcm_writei(pcm_handle, ptra, len/4);
         //    std::printf("loop nr %i ;%ld clicks; %f seconds\n",a,clck,((float)clck)/CLOCKS_PER_SEC);
 
         
@@ -297,8 +258,8 @@ void processB(mqd_t mqAB, mqd_t mqBA)
         }
     }
 
-    shm_unlink("/waga");
-    //shmctl(shmid, IPC_RMID, NULL);
+    shmdt(str);
+    shmctl(shmid, IPC_RMID, NULL);
 }
 
 void createProc(void (*function)())
@@ -320,7 +281,6 @@ int main()
 
     initSharedMemory();
 
-    
     mqd_t mqAB;              // message queue
     mqd_t mqBA;
     /*struct*/ mq_attr attr; // message attributes
@@ -348,7 +308,7 @@ int main()
     }
 
     //std::cout << "main" << std::endl;
-    sleep(3);
+    //sleep(3);
     //createProc(processB);
 
     //creating new process
@@ -365,7 +325,7 @@ int main()
 
     while (wait(NULL) > 0)
     {
-        std::cout << "a";
+        //std::cout << "a";
     }
     
     mq_unlink("/queueBtoA");
