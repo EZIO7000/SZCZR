@@ -59,7 +59,7 @@ void processA(shared_mutex_t mutexA, shared_mutex_t mutexB)
         vals[i] = SHRT_MAX * sin(arg * i);
     }
 
-    std::cout << "AAAA" << std::endl;
+    //std::cout << "AAAA" << std::endl;
     //petla od tąd
     int loop = 0;
     while (loop < 30)
@@ -71,7 +71,7 @@ void processA(shared_mutex_t mutexA, shared_mutex_t mutexB)
         vals[len] = nano;
         // pthread_mutex_lock(mutex.ptr);
         memcpy(str, vals, sizeof(vals));
-        std::cout << "A" << std::endl;
+        //std::cout << "A" << std::endl;
         // pthread_mutex_unlock(mutex.ptr);
 
         loop++;
@@ -86,12 +86,12 @@ void processA(shared_mutex_t mutexA, shared_mutex_t mutexB)
 
 void processB(shared_mutex_t mutexA, shared_mutex_t mutexB)
 {
-    // shared_mutex_t mutex = shared_mutex_init("/my-mutex");
-    // if (mutex.ptr == NULL)
-    // {
-    //     std::cout << "Could not initialise mutex" << std::endl;
-    //     return;
-    // }
+    shared_mutex_t mutex = shared_mutex_init("/my-mutex");
+    if (mutex.ptr == NULL)
+    {
+        std::cout << "Could not initialise mutex" << std::endl;
+        return;
+    }
 
     key_t key = ftok("shmfile", 65);
     int shmid = shmget(key, 32000000, 0666 | IPC_CREAT);
@@ -120,37 +120,37 @@ void processB(shared_mutex_t mutexA, shared_mutex_t mutexB)
     // pthread_mutex_lock(mutex.ptr);
     memcpy(&vals, str, sizeof(vals));
 
-    // snd_pcm_hw_params_alloca(&hwparams);
+     snd_pcm_hw_params_alloca(&hwparams);
 
-    // ret = snd_pcm_open(&pcm_handle, pcm_name, stream, 0);
+     ret = snd_pcm_open(&pcm_handle, pcm_name, stream, 0);
     // std::cout << "Opening: " << snd_strerror(ret) << std::endl;
 
-    // ret = snd_pcm_hw_params_any(pcm_handle, hwparams);
+     ret = snd_pcm_hw_params_any(pcm_handle, hwparams);
     // std::cout << "Initializing hwparams structure: " << snd_strerror(ret) << std::endl;
 
-    // ret = snd_pcm_hw_params_set_access(pcm_handle, hwparams,
-    //                                    SND_PCM_ACCESS_RW_INTERLEAVED);
+     ret = snd_pcm_hw_params_set_access(pcm_handle, hwparams,
+                                        SND_PCM_ACCESS_RW_INTERLEAVED);
     // std::cout << "Setting access: " << snd_strerror(ret) << std::endl;
 
-    // ret = snd_pcm_hw_params_set_format(pcm_handle, hwparams,
-    //                                    SND_PCM_FORMAT_S16_LE);
+     ret = snd_pcm_hw_params_set_format(pcm_handle, hwparams,
+                                       SND_PCM_FORMAT_S16_LE);
     // std::cout << "Setting format: " << snd_strerror(ret) << std::endl;
 
-    // ret = snd_pcm_hw_params_set_rate(pcm_handle, hwparams,
-    //                                  rate, (int)0);
+     ret = snd_pcm_hw_params_set_rate(pcm_handle, hwparams,
+                                      rate, (int)0);
     // std::cout << "Setting rate: " << snd_strerror(ret) << std::endl;
 
-    // ret = snd_pcm_hw_params_set_channels(pcm_handle, hwparams, 2);
+     ret = snd_pcm_hw_params_set_channels(pcm_handle, hwparams, 2);
     // std::cout << "Setting channels: " << snd_strerror(ret) << std::endl;
 
-    // ret = snd_pcm_hw_params_set_periods(pcm_handle, hwparams, 2, 0);
+     ret = snd_pcm_hw_params_set_periods(pcm_handle, hwparams, 2, 0);
     // std::cout << "Setting periods: " << snd_strerror(ret) << std::endl;
 
-    // ret = snd_pcm_hw_params_set_buffer_size_near(pcm_handle, hwparams,
-    //                                              &bufferSize);
+     ret = snd_pcm_hw_params_set_buffer_size_near(pcm_handle, hwparams,
+                                                  &bufferSize);
     // std::cout << "Setting buffer size: " << snd_strerror(ret) << std::endl;
 
-    // ret = snd_pcm_hw_params(pcm_handle, hwparams);
+     ret = snd_pcm_hw_params(pcm_handle, hwparams);
     // std::cout << "Applying parameters: " << snd_strerror(ret) << std::endl;
 
     long int valsTmp[len + 1];
@@ -175,15 +175,15 @@ void processB(shared_mutex_t mutexA, shared_mutex_t mutexB)
         auto duration = endTimeTmp.time_since_epoch();
         auto endTime = std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
 
-        // int err;
-        // const void *ptra = (const void *)&vals;
-        // err = snd_pcm_prepare(pcm_handle);
+        int err;
+        const void *ptra = (const void *)&vals;
+        err = snd_pcm_prepare(pcm_handle);
         // std::cout << "Preparing: " << snd_strerror(err) << std::endl;
-        // while (err != 0)
-        // {
-        //     err = snd_pcm_prepare(pcm_handle);
-        // }
-        // snd_pcm_writei(pcm_handle, ptra, len / 4);
+         while (err != 0)
+         {
+             err = snd_pcm_prepare(pcm_handle);
+         }
+         snd_pcm_writei(pcm_handle, ptra, len / 4);
 
         std::printf("loop nr i ;%ld micorseconds; \n", /*a,*/ (endTime - startTime));
 
