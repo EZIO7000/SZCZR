@@ -23,7 +23,7 @@
 #include <climits>
 #include <alsa/asoundlib.h>
 
-
+#include <chrono>
 
 void initSharedMemory()
 {
@@ -43,23 +43,33 @@ void processA(pthread_spinlock_t lock, int ret)
     unsigned char *str = (unsigned char *)shmat(shmid, (void *)0, 0);
     
     int rate = 44100;
-    const uint16_t freq = 440;
+    const uint16_t freq = 250;
     long unsigned int bufferSize = 4087*4;
     const uint16_t len = bufferSize*16;
     const float_t arg = 2 * 3.141592 * freq / rate;
-    uint16_t vals[len];
+    long int vals[len+1];
     int i = 0;
     for(i; i < len; i = i + 1) {
         vals[i] = SHRT_MAX * sin(arg*i);
     }
 
+    
+
+
+// loop from here I guess idk
+
+    std::chrono::time_point<std::chrono::system_clock> startTime = std::chrono::system_clock::now();
+    auto duration = startTime.time_since_epoch();
+    auto nano = std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
+    vals[len] = nano;
     std::cout<<"A"<<std::endl;
     memcpy(str, vals, sizeof(vals));
     std::cout<<"A"<<std::endl;
 
-    shmdt(str);
 
     ret = pthread_spin_unlock(&lock);
+    shmdt(str); // <- to poza petla powinno byc nie? po unlock'u
+
 }
 
 void processB(pthread_spinlock_t lock, int ret1)
@@ -79,7 +89,7 @@ void processB(pthread_spinlock_t lock, int ret1)
     char* pcm_name = strdup("plughw:0,0");  // on-board audio jack
     int rate = 44100;
 
-    const uint16_t freq = 440;
+    const uint16_t freq = 240;
     long unsigned int bufferSize = 4087*4;
     const uint16_t len = bufferSize*16;
     const float_t arg = 2 * 3.141592 * freq / rate;
@@ -94,60 +104,68 @@ void processB(pthread_spinlock_t lock, int ret1)
     snd_pcm_hw_params_alloca(&hwparams);
 
     ret = snd_pcm_open(&pcm_handle, pcm_name, stream, 0);
-    std::cout << "Opening: " << snd_strerror(ret) << std::endl;
+    //std::cout << "Opening: " << snd_strerror(ret) << std::endl;
 
     ret = snd_pcm_hw_params_any(pcm_handle, hwparams);
-    std::cout << "Initializing hwparams structure: " << snd_strerror(ret) << std::endl;   
+    //std::cout << "Initializing hwparams structure: " << snd_strerror(ret) << std::endl;   
 
     ret = snd_pcm_hw_params_set_access(pcm_handle, hwparams,
             SND_PCM_ACCESS_RW_INTERLEAVED);
-    std::cout << "Setting access: " << snd_strerror(ret) << std::endl;
+    //std::cout << "Setting access: " << snd_strerror(ret) << std::endl;
 
     ret = snd_pcm_hw_params_set_format(pcm_handle, hwparams,
             SND_PCM_FORMAT_S16_LE);
-    std::cout << "Setting format: " << snd_strerror(ret) << std::endl;
+    //std::cout << "Setting format: " << snd_strerror(ret) << std::endl;
 
     ret = snd_pcm_hw_params_set_rate(pcm_handle, hwparams,
             rate, (int)0);
-    std::cout << "Setting rate: " << snd_strerror(ret) << std::endl;
+    //std::cout << "Setting rate: " << snd_strerror(ret) << std::endl;
 
     ret = snd_pcm_hw_params_set_channels(pcm_handle, hwparams, 2); 
-    std::cout << "Setting channels: " << snd_strerror(ret) << std::endl;
+    //std::cout << "Setting channels: " << snd_strerror(ret) << std::endl;
 
     ret = snd_pcm_hw_params_set_periods(pcm_handle, hwparams, 2, 0);
-    std::cout << "Setting periods: " << snd_strerror(ret) << std::endl;
+    //std::cout << "Setting periods: " << snd_strerror(ret) << std::endl;
 
     ret = snd_pcm_hw_params_set_buffer_size_near(pcm_handle, hwparams,
             &bufferSize);
-    std::cout << "Setting buffer size: " << snd_strerror(ret) << std::endl;
+    //std::cout << "Setting buffer size: " << snd_strerror(ret) << std::endl;
 
     ret = snd_pcm_hw_params(pcm_handle, hwparams);
-    std::cout << "Applying parameters: " << snd_strerror(ret) << std::endl;
+    //std::cout << "Applying parameters: " << snd_strerror(ret) << std::endl;
 
- 
-    
-    int newValues[4];
-
-    int isEmpty = 1;
-    int newRows = 0, newCols = 0, newType = 0;
-    
+ // loop from here
     
     std::cout<<"B"<<std::endl;
-        memcpy(&vals, str, sizeof(vals));
-        std::cout<<"B"<<std::endl;
-        
+    long int valsTmp[len+1];
+
+    memcpy(&valsTmp, str, sizeof(valsTmp));
+    std::cout<<"B"<<std::endl;
+    
+    clock_t startTime = valsTmp[len];
+
+        i = 0;
+        for(i; i < len; i = i + 1) {
+            vals[i] = valsTmp[i];
+        }
+
+    std::chrono::time_point<std::chrono::system_clock> endTimeTmp = std::chrono::system_clock::now();
+    auto duration = endTimeTmp.time_since_epoch();
+    auto endTime = std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
+
 
     int err;
     const void* ptra = (const void*)&vals;
     err = snd_pcm_prepare(pcm_handle);
-    std::cout << "Preparing: " << snd_strerror(err)<< std::endl;
+    //std::cout << "Preparing: " << snd_strerror(err)<< std::endl;
     while(err!=0)
         {   
             err = snd_pcm_prepare(pcm_handle);  
         }
-    snd_pcm_writei(pcm_handle, ptra, len);
-    
+    snd_pcm_writei(pcm_handle, ptra, len/2);
+    std::printf("loop nr  i ;%ld micorseconds; \n",/*a,*/(endTime - startTime));
 
+//endloop
     ret1 = pthread_spin_unlock(&lock);
     
     shmdt(str);
@@ -207,6 +225,6 @@ int main()
     }
     
     ret = pthread_spin_destroy(&lock);
-
+    
     return 0;
 }

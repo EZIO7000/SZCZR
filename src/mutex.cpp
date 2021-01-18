@@ -21,6 +21,11 @@
 #include <climits>
 #include <alsa/asoundlib.h>
 #include <math.h>
+#include <chrono>
+typedef std::chrono::high_resolution_clock Clock;
+std::chrono::_V2::system_clock::time_point t1;
+std::chrono::_V2::system_clock::time_point t2;
+clock_t clck;
 
 void initSharedMemory()
 {
@@ -46,17 +51,21 @@ void processA()
     
 
 int rate = 44100;
-const uint16_t freq = 440;
+const uint16_t freq = 250;
 long unsigned int bufferSize = 4087*4;
 const uint16_t len = bufferSize*16;
 const float_t arg = 2 * 3.141592 * freq / rate;
-uint16_t vals[len];
+long int vals[len+1];
 int i = 0;
 for(i; i < len; i = i + 1) {
     vals[i] = SHRT_MAX * sin(arg*i);
 }
 
-
+//petla od tąd
+    std::chrono::time_point<std::chrono::system_clock> startTime = std::chrono::system_clock::now();
+    auto duration = startTime.time_since_epoch();
+    auto nano = std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
+    vals[len] = nano;
    // pthread_mutex_lock(mutex.ptr);
     std::cout<<"A"<<std::endl;
     memcpy(str, vals, sizeof(vals));
@@ -94,7 +103,7 @@ void processB()
     char* pcm_name = strdup("plughw:0,0");  // on-board audio jack
     int rate = 44100;
 
-    const uint16_t freq = 440;
+    const uint16_t freq = 240;
     long unsigned int bufferSize = 4087*4;
     const uint16_t len = bufferSize*16;
     const float_t arg = 2 * 3.141592 * freq / rate;
@@ -105,12 +114,6 @@ void processB()
     }
 
 
-   // bool windowCreated = false;
-    int isEmpty = 1;
-    int newRows = 0, newCols = 0, newType = 0;
-  
-
-    
     
     std::cout<<"B"<<std::endl;
        // pthread_mutex_lock(mutex.ptr);
@@ -151,6 +154,23 @@ void processB()
     ret = snd_pcm_hw_params(pcm_handle, hwparams);
     std::cout << "Applying parameters: " << snd_strerror(ret) << std::endl;
 
+    long int valsTmp[len+1];
+//pętla jakoś od tąd
+        //shared memory receive
+    memcpy(&valsTmp, str, sizeof(valsTmp));
+
+    clock_t startTime = valsTmp[len];
+
+    i = 0;
+    for(i; i < len; i = i + 1) {
+        vals[i] = valsTmp[i];
+        }
+
+    std::chrono::time_point<std::chrono::system_clock> endTimeTmp = std::chrono::system_clock::now();
+    auto duration = endTimeTmp.time_since_epoch();
+    auto endTime = std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
+            
+    
 
 int err;
     const void* ptra = (const void*)&vals;
@@ -160,7 +180,9 @@ int err;
     {   
         err = snd_pcm_prepare(pcm_handle);  
     }
-    snd_pcm_writei(pcm_handle, ptra, len);
+    snd_pcm_writei(pcm_handle, ptra, len/4);
+    
+    std::printf("loop nr i ;%ld micorseconds; \n",/*a,*/(endTime - startTime));
 
 
     shmdt(str);
