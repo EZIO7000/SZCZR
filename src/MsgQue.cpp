@@ -143,10 +143,10 @@ void processB(mqd_t mqAB, mqd_t mqBA)
 
     int ret;
 
-    // snd_pcm_t* pcm_handle;  // device handle
-    // snd_pcm_stream_t stream = SND_PCM_STREAM_PLAYBACK;
-    // snd_pcm_hw_params_t* hwparams;  // hardware information
-    // char* pcm_name = strdup("plughw:0,0");  // on-board audio jack
+    snd_pcm_t* pcm_handle;  // device handle
+    snd_pcm_stream_t stream = SND_PCM_STREAM_PLAYBACK;
+    snd_pcm_hw_params_t* hwparams;  // hardware information
+    char* pcm_name = strdup("plughw:0,0");  // on-board audio jack
     int rate = 44100;
 
     const uint16_t freq = 240;
@@ -160,38 +160,38 @@ void processB(mqd_t mqAB, mqd_t mqBA)
     }
     
     
-    // snd_pcm_hw_params_alloca(&hwparams);
+    snd_pcm_hw_params_alloca(&hwparams);
 
-    // ret = snd_pcm_open(&pcm_handle, pcm_name, stream, 0);
-    // //std::cout << "Opening: " << snd_strerror(ret) << std::endl;
+    ret = snd_pcm_open(&pcm_handle, pcm_name, stream, 0);
+    //std::cout << "Opening: " << snd_strerror(ret) << std::endl;
 
-    // ret = snd_pcm_hw_params_any(pcm_handle, hwparams);
-    // //std::cout << "Initializing hwparams structure: " << snd_strerror(ret) << std::endl;   
+    ret = snd_pcm_hw_params_any(pcm_handle, hwparams);
+    //std::cout << "Initializing hwparams structure: " << snd_strerror(ret) << std::endl;   
 
-    // ret = snd_pcm_hw_params_set_access(pcm_handle, hwparams,
-    //         SND_PCM_ACCESS_RW_INTERLEAVED);
-    // //std::cout << "Setting access: " << snd_strerror(ret) << std::endl;
+    ret = snd_pcm_hw_params_set_access(pcm_handle, hwparams,
+            SND_PCM_ACCESS_RW_INTERLEAVED);
+    //std::cout << "Setting access: " << snd_strerror(ret) << std::endl;
 
-    // ret = snd_pcm_hw_params_set_format(pcm_handle, hwparams,
-    //         SND_PCM_FORMAT_S16_LE);
-    // //std::cout << "Setting format: " << snd_strerror(ret) << std::endl;
+    ret = snd_pcm_hw_params_set_format(pcm_handle, hwparams,
+            SND_PCM_FORMAT_S16_LE);
+    //std::cout << "Setting format: " << snd_strerror(ret) << std::endl;
 
-    // ret = snd_pcm_hw_params_set_rate(pcm_handle, hwparams,
-    //         rate, (int)0);
-    // //std::cout << "Setting rate: " << snd_strerror(ret) << std::endl;
+    ret = snd_pcm_hw_params_set_rate(pcm_handle, hwparams,
+            rate, (int)0);
+    //std::cout << "Setting rate: " << snd_strerror(ret) << std::endl;
 
-    // ret = snd_pcm_hw_params_set_channels(pcm_handle, hwparams, 2); 
-    // //std::cout << "Setting channels: " << snd_strerror(ret) << std::endl;
+    ret = snd_pcm_hw_params_set_channels(pcm_handle, hwparams, 2); 
+    //std::cout << "Setting channels: " << snd_strerror(ret) << std::endl;
 
-    // ret = snd_pcm_hw_params_set_periods(pcm_handle, hwparams, 2, 0);
-    // //std::cout << "Setting periods: " << snd_strerror(ret) << std::endl;
+    ret = snd_pcm_hw_params_set_periods(pcm_handle, hwparams, 2, 0);
+    //std::cout << "Setting periods: " << snd_strerror(ret) << std::endl;
 
-    // ret = snd_pcm_hw_params_set_buffer_size_near(pcm_handle, hwparams,
-    //         &bufferSize);
-    // //std::cout << "Setting buffer size: " << snd_strerror(ret) << std::endl;
+    ret = snd_pcm_hw_params_set_buffer_size_near(pcm_handle, hwparams,
+            &bufferSize);
+    //std::cout << "Setting buffer size: " << snd_strerror(ret) << std::endl;
 
-    // ret = snd_pcm_hw_params(pcm_handle, hwparams);
-    // //std::cout << "Applying parameters: " << snd_strerror(ret) << std::endl;
+    ret = snd_pcm_hw_params(pcm_handle, hwparams);
+    //std::cout << "Applying parameters: " << snd_strerror(ret) << std::endl;
 
     bool zakonczono = false;
     int a = 0;
@@ -231,17 +231,17 @@ void processB(mqd_t mqAB, mqd_t mqBA)
         //    std::time_t endTime = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
             //std::cout << "Zczytalo czas zakonczenia: " << endTime << std::endl;
             t2 = Clock::now();
-            // int err;
-            // const void* ptra = (const void*)&vals;
-            // err = snd_pcm_prepare(pcm_handle);
+             int err;
+             const void* ptra = (const void*)&vals;
+            err = snd_pcm_prepare(pcm_handle);
             //std::cout << "Preparing: " << snd_strerror(err)
-            //    << std::endl;
-            // while(err!=0)
-            // {   
-            //     err = snd_pcm_prepare(pcm_handle); 
-            //     //std::cout<<"AA"; 
-            // }
-            // snd_pcm_writei(pcm_handle, ptra, len);
+            //   << std::endl;
+            while(err!=0)
+            {   
+                err = snd_pcm_prepare(pcm_handle); 
+                //std::cout<<"AA"; 
+            }
+            snd_pcm_writei(pcm_handle, ptra, len/4);
         //    std::printf("loop nr %i ;%ld clicks; %f seconds\n",a,clck,((float)clck)/CLOCKS_PER_SEC);
 
         
