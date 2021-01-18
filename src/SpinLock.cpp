@@ -24,7 +24,7 @@
 #include <alsa/asoundlib.h>
 
 #include <chrono>
-
+bool wasSent = false;
 void initSharedMemory()
 {
     key_t key = ftok("shmfile", 65);
@@ -32,9 +32,10 @@ void initSharedMemory()
     unsigned char *str = (unsigned char *)shmat(shmid, (void *)0, 0);
 }
 
-void processA(pthread_spinlock_t lockA, pthread_spinlock_t lockB, int ret)
+void processA(pthread_spinlock_t lockA,/* pthread_spinlock_t lockB,*/ int ret)
 {
 
+    pthread_spin_lock(&lockA);
     key_t key = ftok("shmfile", 65);
     int shmid = shmget(key, 32000000, 0666 | IPC_CREAT);
     unsigned char *str = (unsigned char *)shmat(shmid, (void *)0, 0);
@@ -44,7 +45,7 @@ void processA(pthread_spinlock_t lockA, pthread_spinlock_t lockB, int ret)
     long unsigned int bufferSize = 4087 * 4;
     const uint16_t len = bufferSize * 16;
     const float_t arg = 2 * 3.141592 * freq / rate;
-    long int vals[len + 1];
+    long int vals[len + 2];
     int i = 0;
     for (i; i < len; i = i + 1)
     {
@@ -55,28 +56,44 @@ void processA(pthread_spinlock_t lockA, pthread_spinlock_t lockB, int ret)
     int a = 0;
     while (a < 30)
     {
+        
+        vals[len] = wasSent;
+        
+       // std::cout << "A" << std::endl;
+        if(wasSent)
+        {
+            while (wasSent)
+            {
+                //printf("\nProc A: wait for the spinlock...");
+                ret = pthread_spin_unlock(&lockA);
+                //sleep(3); 
+                memcpy( &vals,str, sizeof(vals));
+                wasSent = vals[len];
+                //std::cout<<std::endl<<"loop nr in a"<<a<<"  "<<wasSent;
+                ret = pthread_spin_lock(&lockA);
+            }   
+        }
         std::chrono::time_point<std::chrono::system_clock> startTime = std::chrono::system_clock::now();
         auto duration = startTime.time_since_epoch();
         auto nano = std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
-        vals[len] = nano;
-        std::cout << "A" << std::endl;
+        vals[len+1] = nano;
 
-        if (pthread_spin_trylock(&lockA))
-        {
-            printf("Proc A: wait for the spinlock...\n");
-            pthread_spin_lock(&lockA);
-        }
+        wasSent = true;
+        vals[len] = wasSent;
         memcpy(str, vals, sizeof(vals));
-        ret = pthread_spin_unlock(&lockB);
-        std::cout << "A" << std::endl;
+        ret = pthread_spin_unlock(&lockA);
+        
+        //std::cout<<std::endl<< "A sent" <<wasSent<< std::endl;
         a++;
     }
 
     shmdt(str); // <- to poza petla powinno byc nie? po unlock'u
 }
 
-void processB(pthread_spinlock_t lockA, pthread_spinlock_t lockB, int ret1)
+void processB(/*pthread_spinlock_t lockA,*/ pthread_spinlock_t lockB, int ret1)
 {
+    
+
     key_t key = ftok("shmfile", 65);
     int shmid = shmget(key, 32000000, 0666 | IPC_CREAT);
     unsigned char *str = (unsigned char *)shmat(shmid, (void *)0, 0);
@@ -134,24 +151,43 @@ void processB(pthread_spinlock_t lockA, pthread_spinlock_t lockB, int ret1)
     //std::cout << "Applying parameters: " << snd_strerror(ret) << std::endl;
 
     // loop from here
-
+    //std::cout<<pthread_spin_lock(&lockB);
+    long int valsTmp[len + 2];
+    //memcpy(&valsTmp, str, sizeof(valsTmp));
+    //wasSent = valsTmp;
     int loop = 0;
     while (loop < 30)
     {
-        if (pthread_spin_trylock(&lockB))
-        {
-            printf("Proc B: wait for the spinlock...\n");
-            pthread_spin_lock(&lockB);
+        //memcpy(&valsTmp, str, sizeof(valsTmp));
+        //wasSent = valsTmp;
+        if(!wasSent){
+            while (!wasSent)
+            {
+                //printf("\nProc B: wait for the spinlock...");
+                memcpy(&valsTmp, str, sizeof(valsTmp));
+                wasSent = valsTmp[len];
+                //std::cout<<"\nB recieved "<<wasSent<<std::endl;
+                ret1 = pthread_spin_unlock(&lockB);
+                //sleep(1); 
+                //std::cout<<"loop in B "<<loop<<std::endl;
+                ret1 = pthread_spin_lock(&lockB);
+            }
+            loop++;
         }
+        //pthread_spin_lock(&lockB);
         //ret1 = pthread_spin_lock(&lock);
-
-        std::cout << "B" << std::endl;
-        long int valsTmp[len + 1];
+        //printf("Proc B: made it past while\n");
+        //std::cout << "B" << std::endl;
+        
 
         memcpy(&valsTmp, str, sizeof(valsTmp));
-        std::cout << "B" << std::endl;
+        wasSent = false;
+        valsTmp[len] = wasSent;
+        memcpy(str, &valsTmp, sizeof(valsTmp));
 
-        clock_t startTime = valsTmp[len];
+        //std::cout << "B sent" <<wasSent<< std::endl;
+
+        
 
         i = 0;
         for (i; i < len; i = i + 1)
@@ -159,6 +195,7 @@ void processB(pthread_spinlock_t lockA, pthread_spinlock_t lockB, int ret1)
             vals[i] = valsTmp[i];
         }
 
+        clock_t startTime = valsTmp[len+1];
         std::chrono::time_point<std::chrono::system_clock> endTimeTmp = std::chrono::system_clock::now();
         auto duration = endTimeTmp.time_since_epoch();
         auto endTime = std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
@@ -171,11 +208,11 @@ void processB(pthread_spinlock_t lockA, pthread_spinlock_t lockB, int ret1)
         {
             err = snd_pcm_prepare(pcm_handle);
         }
-        snd_pcm_writei(pcm_handle, ptra, len / 2);
+        snd_pcm_writei(pcm_handle, ptra, len / 4);
         std::printf("loop nr  i ;%ld micorseconds; \n", /*a,*/ (endTime - startTime));
 
         //endloop
-        ret1 = pthread_spin_unlock(&lockA);
+        ret1 = pthread_spin_unlock(&lockB);
     }
 
     shmdt(str);
@@ -203,32 +240,32 @@ int main()
     int ret;
     int retB;
     ret = pthread_spin_init(&lockA, pshared);
-    retB = pthread_spin_init(&lockB, pshared);
+    retB = pthread_spin_init(&lockA, pshared);
 
     initSharedMemory();
 
-    std::cout << "main" << std::endl;
+    //std::cout << "main" << std::endl;
     //createProc(processA);
 
     //creating new process
     if (fork() == 0)
     {
-        processA(lockA, lockB, ret);
+        processA(lockA,  ret);
         exit(0);
     }
 
-    std::cout << "main" << std::endl;
-    sleep(3);
+    //std::cout << "main" << std::endl;
+    sleep(1);
     //createProc(processB);
 
     //creating new process
     if (fork() == 0)
     {
-        processB(lockA, lockB, ret);
+        processB(lockA, ret);
         exit(0);
     }
 
-    std::cout << "main" << std::endl;
+    //std::cout << "main" << std::endl;
 
     while (wait(NULL) > 0)
     {
