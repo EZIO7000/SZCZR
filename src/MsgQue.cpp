@@ -37,17 +37,18 @@ typedef struct shmData
 {
     uint16_t vals[4087*4*16];
     long int timer;
+    char a;
 } shm_D;
 
 void initSharedMemory()
-{
-    key_t key = ftok("shmfile", 65);
-    int shmid = shmget(key, 64000000, 0666 | IPC_CREAT);
-    unsigned char *str = (unsigned char *)shmat(shmid, (void *)0, 0);
-
-//    int fd = shm_open("/waga",O_CREAT | , S_IRUSR | S_IWUSR);
-    
-    shm_D *shmp = (shm_D *)mmap(NULL, sizeof(*shmp), PROT_READ | PROT_WRITE, MAP_SHARED,shmid,0);
+{   
+    shm_unlink("/waga");
+    int fd = shm_open("/waga",O_CREAT | O_RDWR| O_EXCL, S_IRUSR | S_IWUSR);
+    if (fd == -1)
+        perror("cannot create shared memory in init");
+    shm_D *shmp = (shm_D *)mmap(NULL, sizeof(*shmp), PROT_READ | PROT_WRITE, MAP_SHARED,fd,0);
+    if (shmp == MAP_FAILED)
+        perror("MAP FAILED");
 
    
 }
@@ -55,15 +56,21 @@ void initSharedMemory()
 //void processA(mqd_t mqAB, mqd_t mqBA, mq_attr attr)
 void processA(mqd_t mqAB, mqd_t mqBA)
 {
+    std::cout<<"WAAAGAHAI";
     char buffer[sizeof(int)];
 
-    key_t key = ftok("shmfile", 65);
-    int shmid = shmget(key, 32000000, 0666 | IPC_CREAT);
-    unsigned char *str = (unsigned char *)shmat(shmid, (void *)0, 0);
-
-        shm_D *shmp = (shm_D *)mmap(NULL, sizeof(*shmp), PROT_READ | PROT_WRITE, MAP_SHARED,shmid,0);
-
+    int fd = shm_open("/waga",O_RDWR,0);
+    if (fd == -1)
+        perror("cannot open shared memory in a");
     
+    shm_D *shmp = (shm_D *)mmap(NULL, sizeof(*shmp), PROT_READ | PROT_WRITE, MAP_SHARED,fd,0);
+        if (shmp == MAP_FAILED)
+        perror("failed to map in A");
+
+        
+    std::cout<<"WAA";
+    shmp->a = 'a';
+    std::cout<<shmp->a;
     
     int rate = 44100;
     const uint16_t freq = 250;
@@ -103,8 +110,10 @@ void processA(mqd_t mqAB, mqd_t mqBA)
         //clck = clock();
     //    startTime = clock();
         t1 = Clock::now();
+        std::cout<<"sgh";
         if (bytes_read > 0)
         {
+            std::cout<<"sgh2";
             if (!strncmp(buffer, "111", strlen("111")))
             {
                 std::cout << "Odebrana wiadomosc zakonczenia to: " << buffer << std::endl;
@@ -122,7 +131,7 @@ void processA(mqd_t mqAB, mqd_t mqBA)
            // vals[len-1] = nano;
         //    vals[len] = 100000;
         //    std::cout << "Czas w A: " << nano << std::endl;
-
+            std::cout<<"sgh";
             //std::cout << "Zczytalo czas rozpoczecia: " << vals[len] << std::endl;
             memcpy(shmp->vals, vals, sizeof(vals));
             shmp->timer = nano;
@@ -134,23 +143,25 @@ void processA(mqd_t mqAB, mqd_t mqBA)
         }
     }
 
-    shmdt(str);
-    shmctl(shmid, IPC_RMID, NULL);
+    shm_unlink("/waga");
+    //shmctl(shmid, IPC_RMID, NULL);
 }
 
 //void processB(mqd_t mqAB, mqd_t mqBA, mq_attr attr)
 void processB(mqd_t mqAB, mqd_t mqBA)
 {
     char buffer[sizeof(int) + 1];
-
-    key_t key = ftok("shmfile", 65);
-    int shmid = shmget(key, 32000000, 0666 | IPC_CREAT);
-    unsigned char *str = (unsigned char *)shmat(shmid, (void *)0, 0);
-
+    std::cout<<"HAHA";
+    int fd = shm_open("/waga",O_RDWR,0);
+    if (fd == -1)
+        perror("cannot open shared memory in a");
+    
     mqBA = mq_open("/queueBtoA", O_WRONLY);
     mqAB = mq_open("/queueAtoB", O_RDONLY);
 
-    shm_D *shmp = (shm_D *)mmap(NULL, sizeof(*shmp), PROT_READ | PROT_WRITE, MAP_SHARED,shmid,0);
+    shm_D *shmp = (shm_D *)mmap(NULL, sizeof(*shmp), PROT_READ | PROT_WRITE, MAP_SHARED,fd,0);
+        if (shmp == MAP_FAILED)
+        perror("MAP FAILED B");
 
 
     int ret;
@@ -204,14 +215,16 @@ void processB(mqd_t mqAB, mqd_t mqBA)
     //std::cout << "Setting buffer size: " << snd_strerror(ret) << std::endl;
 
     ret = snd_pcm_hw_params(pcm_handle, hwparams);
-    //std::cout << "Applying parameters: " << snd_strerror(ret) << std::endl;
+    std::cout << "Applying parameters: " << snd_strerror(ret) << std::endl;
 
     bool zakonczono = false;
     int a = 0;
+    std::cout<<"b1";
     while (a < 30)
     {
+        std::cout<<"b2";
         ssize_t bytes_read;
-
+        std::cout<<"b3";
         bytes_read = mq_receive(mqAB, buffer, sizeof(int), NULL);
         std::cout<<"B"<<std::endl;
         if (bytes_read > 0)
@@ -223,7 +236,7 @@ void processB(mqd_t mqAB, mqd_t mqBA)
             }
 
             //shared memory receive
-            memcpy(&vals, shmp->vals, sizeof(vals));
+            memcpy(vals, shmp->vals, sizeof(vals));
             std::cout<<"BEEE";
             clock_t startTime;
             memcpy(&startTime, &shmp->timer,sizeof(startTime));
@@ -284,8 +297,8 @@ void processB(mqd_t mqAB, mqd_t mqBA)
         }
     }
 
-    shmdt(str);
-    shmctl(shmid, IPC_RMID, NULL);
+    shm_unlink("/waga");
+    //shmctl(shmid, IPC_RMID, NULL);
 }
 
 void createProc(void (*function)())
@@ -335,7 +348,7 @@ int main()
     }
 
     //std::cout << "main" << std::endl;
-    //sleep(3);
+    sleep(3);
     //createProc(processB);
 
     //creating new process
@@ -352,7 +365,7 @@ int main()
 
     while (wait(NULL) > 0)
     {
-        //std::cout << "a";
+        std::cout << "a";
     }
     
     mq_unlink("/queueBtoA");
