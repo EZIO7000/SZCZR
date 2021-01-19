@@ -56,7 +56,7 @@ void processA(shared_mutex_t mutexA, shared_mutex_t mutexB)
     long unsigned int bufferSize = 4087 * 4;
     const uint16_t len = bufferSize * 16;
     const float_t arg = 2 * 3.141592 * freq / rate;
-    long int vals[len + 1];
+    long int vals[len + GARBAGE_SIZE];
     int i = 0;
     for (i; i < len; i = i + 1)
     {
@@ -95,13 +95,6 @@ void processA(shared_mutex_t mutexA, shared_mutex_t mutexB)
 
 void processB(shared_mutex_t mutexA, shared_mutex_t mutexB)
 {
-    shared_mutex_t mutex = shared_mutex_init("/my-mutex");
-    if (mutex.ptr == NULL)
-    {
-        std::cout << "Could not initialise mutex" << std::endl;
-        return;
-    }
-
     key_t key = ftok("shmfile", 65);
     int shmid = shmget(key, 32000000, 0666 | IPC_CREAT);
     unsigned char *str = (unsigned char *)shmat(shmid, (void *)0, 0);
@@ -195,7 +188,7 @@ void processB(shared_mutex_t mutexA, shared_mutex_t mutexB)
          }
          snd_pcm_writei(pcm_handle, ptra, len / 4);
 
-        std::printf("%i;%lld;\n", loop, (endTime - startTime));
+        std::printf("%i;%ld;\n", loop, (endTime - startTime));
 
         loop++;
         //pthread_mutex_unlock(mutex.ptr);

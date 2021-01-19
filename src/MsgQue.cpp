@@ -64,7 +64,7 @@ void processA(mqd_t mqAB, mqd_t mqBA)
     const uint16_t len = bufferSize*16;
     const float_t arg = 2 * 3.141592 * freq / rate;
     //uint16_t vals[len + 1]; //1 na czas rozpoczecia
-    long int vals[len + 1];
+    long int vals[len + GARBAGE_SIZE];
     int i = 0;
     for(i; i < len; i = i + 1) {
         vals[i] = SHRT_MAX * sin(arg*i);
@@ -255,7 +255,7 @@ void processB(mqd_t mqAB, mqd_t mqBA)
         //    std::printf("loop nr %i ;%ld clicks; %f seconds\n",a,clck,((float)clck)/CLOCKS_PER_SEC);
 
         
-        std::printf("loop nr %i ;%lld;\n",a,(endTime - startTime));
+        std::printf("loop nr %i ;%ld;\n",a,(endTime - startTime));
         //    std::cout << "start time: " << startTime << "  end time: " << endTime << std::endl;
         //    std::cout<<"time measured by better clock on loop "<<a<<": "<<
         //    std::chrono::duration_cast<std::chrono::nanoseconds>(t2-t1).count()<<std::endl;
@@ -288,6 +288,9 @@ int main()
     // ./MsgQue
 
     //mqd_t mqdes = mq_open("/msgque", O_RDWR);
+
+    mq_unlink("/queueBtoA");
+    mq_unlink("/queueAtoB");
 
     initSharedMemory();
 

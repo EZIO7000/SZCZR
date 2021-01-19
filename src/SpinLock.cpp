@@ -49,7 +49,7 @@ void processA(pthread_spinlock_t lockA,/* pthread_spinlock_t lockB,*/ int ret)
     long unsigned int bufferSize = 4087 * 4;
     const uint16_t len = bufferSize * 16;
     const float_t arg = 2 * 3.141592 * freq / rate;
-    long int vals[len + 2];
+    long int vals[len + GARBAGE_SIZE];
     int i = 0;
     for (i; i < len; i = i + 1)
     {
@@ -219,7 +219,7 @@ void processB(/*pthread_spinlock_t lockA,*/ pthread_spinlock_t lockB, int ret1)
             err = snd_pcm_prepare(pcm_handle);
         }
         snd_pcm_writei(pcm_handle, ptra, len / 4);
-        std::printf("%i;%lld;\n", /*a,*/ (endTime - startTime));
+        std::printf("%i;%ld;\n", loop, (endTime - startTime));
 
         //endloop
         ret1 = pthread_spin_unlock(&lockB);
