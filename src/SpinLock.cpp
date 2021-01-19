@@ -75,7 +75,7 @@ void processA(shared_mutex_t lockA, shared_mutex_t lockB, int ret)
         wasSent = true;
         vals[len] = wasSent;
         memcpy(str, vals, sizeof(vals));  
-        //std::cout<<std::endl<< "A sent" <<wasSent<< std::endl;
+        std::cout<<std::endl<< "A sent" << std::endl;
         loop++;
         ret = pthread_spin_unlock(lockB.ptr);
     }
@@ -156,9 +156,7 @@ void processB(shared_mutex_t lockA, shared_mutex_t lockB, int ret1)
 
         memcpy(&valsTmp, str, sizeof(valsTmp));
 
-        //std::cout << "B sent" <<wasSent<< std::endl;
-
-        
+        std::cout<<std::endl<< "B recived" << std::endl;
 
         for (int i = 0; i < len; i = i + 1)
         {
