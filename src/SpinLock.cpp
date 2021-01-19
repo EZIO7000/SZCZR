@@ -50,8 +50,7 @@ void processA(pthread_spinlock_t lockA,/* pthread_spinlock_t lockB,*/ int ret)
     const uint16_t len = bufferSize * 16;
     const float_t arg = 2 * 3.141592 * freq / rate;
     long int vals[len + GARBAGE_SIZE];
-    int i = 0;
-    for (i; i < len; i = i + 1)
+    for (uint16_t i = 0; i < len; i = i + 1)
     {
         vals[i] = SHRT_MAX * sin(arg * i);
     }
@@ -120,8 +119,7 @@ void processB(/*pthread_spinlock_t lockA,*/ pthread_spinlock_t lockB, int ret1)
     const uint16_t len = bufferSize * 16;
     const float_t arg = 2 * 3.141592 * freq / rate;
     uint16_t vals[len];
-    int i = 0;
-    for (i; i < len; i = i + 1)
+    for (uint16_t i = 0; i < len; i = i + 1)
     {
         vals[i] = 10 * sin(arg * i);
     }
@@ -199,8 +197,7 @@ void processB(/*pthread_spinlock_t lockA,*/ pthread_spinlock_t lockB, int ret1)
 
         
 
-        i = 0;
-        for (i; i < len; i = i + 1)
+        for (int i = 0; i < len; i = i + 1)
         {
             vals[i] = valsTmp[i];
         }

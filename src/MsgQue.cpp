@@ -65,8 +65,7 @@ void processA(mqd_t mqAB, mqd_t mqBA)
     const float_t arg = 2 * 3.141592 * freq / rate;
     //uint16_t vals[len + 1]; //1 na czas rozpoczecia
     long int vals[len + GARBAGE_SIZE];
-    int i = 0;
-    for(i; i < len; i = i + 1) {
+    for(uint16_t i = 0; i < len; i = i + 1) {
         vals[i] = SHRT_MAX * sin(arg*i);
     }
 
@@ -163,8 +162,7 @@ void processB(mqd_t mqAB, mqd_t mqBA)
     const uint16_t len = bufferSize*16;
     const float_t arg = 2 * 3.141592 * freq / rate;
     uint16_t vals[len];
-    int i = 0;
-    for(i; i < len; i = i + 1) {
+    for(uint16_t i = 0; i < len; i = i + 1) {
         vals[i] = 10 * sin(arg*i);
     }
     
@@ -226,8 +224,7 @@ void processB(mqd_t mqAB, mqd_t mqBA)
 
             clock_t startTime = valsTmp[len];
 
-            int i = 0;
-            for(i; i < len; i = i + 1) {
+            for(int i = 0; i < len; i = i + 1) {
                 vals[i] = valsTmp[i];
             }
 
