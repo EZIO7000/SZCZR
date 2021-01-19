@@ -64,7 +64,7 @@ void processA(mqd_t mqAB, mqd_t mqBA)
     const uint16_t len = bufferSize*16;
     const float_t arg = 2 * 3.141592 * freq / rate;
     //uint16_t vals[len + 1]; //1 na czas rozpoczecia
-    long int vals[len + 1];
+    long int vals[len + GARBAGE_SIZE];
     int i = 0;
     for(i; i < len; i = i + 1) {
         vals[i] = SHRT_MAX * sin(arg*i);
