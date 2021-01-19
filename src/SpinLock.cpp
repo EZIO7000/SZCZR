@@ -24,6 +24,10 @@
 #include <alsa/asoundlib.h>
 
 #include <chrono>
+
+#define LOOP_SIZE 200
+#define GARBAGE_SIZE 1000
+
 bool wasSent = false;
 void initSharedMemory()
 {
@@ -52,9 +56,14 @@ void processA(pthread_spinlock_t lockA,/* pthread_spinlock_t lockB,*/ int ret)
         vals[i] = SHRT_MAX * sin(arg * i);
     }
 
+    for(int i = len; i < GARBAGE_SIZE + len; i++)
+    {
+        vals[i] = 1234567890;
+    }
+
     // loop from here I guess idk
     int a = 0;
-    while (a < 30)
+    while (a < LOOP_SIZE)
     {
         
         vals[len] = wasSent;
@@ -152,11 +161,11 @@ void processB(/*pthread_spinlock_t lockA,*/ pthread_spinlock_t lockB, int ret1)
 
     // loop from here
     //std::cout<<pthread_spin_lock(&lockB);
-    long int valsTmp[len + 2];
+    long int valsTmp[len + GARBAGE_SIZE];
     //memcpy(&valsTmp, str, sizeof(valsTmp));
     //wasSent = valsTmp;
     int loop = 0;
-    while (loop < 30)
+    while (loop < LOOP_SIZE)
     {
         //memcpy(&valsTmp, str, sizeof(valsTmp));
         //wasSent = valsTmp;
