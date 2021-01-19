@@ -157,6 +157,7 @@ void processB(shared_mutex_t mutexA, shared_mutex_t mutexB)
     //pętla jakoś od tąd
 
     int loop = 0;
+    std::printf("loop;microseconds;\n");
     while (loop < 200)
     {
         pthread_mutex_lock(mutexB.ptr);
@@ -185,7 +186,7 @@ void processB(shared_mutex_t mutexA, shared_mutex_t mutexB)
          }
          snd_pcm_writei(pcm_handle, ptra, len / 4);
 
-        std::printf("loop nr i ;%ld micorseconds; \n", /*a,*/ (endTime - startTime));
+        std::printf("%i;%lld;\n", loop, (endTime - startTime));
 
         loop++;
         //pthread_mutex_unlock(mutex.ptr);

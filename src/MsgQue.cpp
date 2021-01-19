@@ -195,6 +195,7 @@ void processB(mqd_t mqAB, mqd_t mqBA)
 
     bool zakonczono = false;
     int a = 0;
+    std::printf("loop;microseconds;\n");
     while (a < 200)
     {
         ssize_t bytes_read;
@@ -245,7 +246,7 @@ void processB(mqd_t mqAB, mqd_t mqBA)
         //    std::printf("loop nr %i ;%ld clicks; %f seconds\n",a,clck,((float)clck)/CLOCKS_PER_SEC);
 
         
-        std::printf("loop nr %i ;%ld micorseconds; \n",a,(endTime - startTime));
+        std::printf("loop nr %i ;%lld;\n",a,(endTime - startTime));
         //    std::cout << "start time: " << startTime << "  end time: " << endTime << std::endl;
         //    std::cout<<"time measured by better clock on loop "<<a<<": "<<
         //    std::chrono::duration_cast<std::chrono::nanoseconds>(t2-t1).count()<<std::endl;

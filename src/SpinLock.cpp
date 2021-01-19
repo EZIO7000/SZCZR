@@ -54,7 +54,7 @@ void processA(pthread_spinlock_t lockA,/* pthread_spinlock_t lockB,*/ int ret)
 
     // loop from here I guess idk
     int a = 0;
-    while (a < 30)
+    while (a < 200)
     {
         
         vals[len] = wasSent;
@@ -156,6 +156,7 @@ void processB(/*pthread_spinlock_t lockA,*/ pthread_spinlock_t lockB, int ret1)
     //memcpy(&valsTmp, str, sizeof(valsTmp));
     //wasSent = valsTmp;
     int loop = 0;
+    std::printf("loop;microseconds;\n");
     while (loop < 200)
     {
         //memcpy(&valsTmp, str, sizeof(valsTmp));
@@ -209,7 +210,7 @@ void processB(/*pthread_spinlock_t lockA,*/ pthread_spinlock_t lockB, int ret1)
             err = snd_pcm_prepare(pcm_handle);
         }
         snd_pcm_writei(pcm_handle, ptra, len / 4);
-        std::printf("loop nr  i ;%ld micorseconds; \n", /*a,*/ (endTime - startTime));
+        std::printf("%i;%lld;\n", /*a,*/ (endTime - startTime));
 
         //endloop
         ret1 = pthread_spin_unlock(&lockB);
