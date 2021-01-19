@@ -65,23 +65,23 @@ void processA(pthread_spinlock_t lockA, pthread_spinlock_t lockB, int ret)
     while (a < LOOP_SIZE)
     {
         ret = pthread_spin_lock(&lockA);
-
+        memcpy( &vals,str, sizeof(vals));
         vals[len] = wasSent;
         
-       // std::cout << "A" << std::endl;
-        // if(wasSent)
-        // {
-        //     while (wasSent)
-        //     {
-        //         //printf("\nProc A: wait for the spinlock...");
-        //         ret = pthread_spin_unlock(&lockA);
-        //         //sleep(3); 
-        //         memcpy( &vals,str, sizeof(vals));
-        //         wasSent = vals[len];
-        //         //std::cout<<std::endl<<"loop nr in a"<<a<<"  "<<wasSent;
-        //         ret = pthread_spin_lock(&lockA);
-        //     }   
-        // }
+       std::cout << "A" << std::endl;
+        if(wasSent)
+        {
+            while (wasSent)
+            {
+                //printf("\nProc A: wait for the spinlock...");
+                ret = pthread_spin_unlock(&lockA);
+                //sleep(3); 
+                memcpy( &vals,str, sizeof(vals));
+                wasSent = vals[len];
+                //std::cout<<std::endl<<"loop nr in a"<<a<<"  "<<wasSent;
+                ret = pthread_spin_lock(&lockA);
+            }   
+        }
 
         std::chrono::time_point<std::chrono::system_clock> startTime = std::chrono::system_clock::now();
         auto duration = startTime.time_since_epoch();
@@ -170,22 +170,23 @@ void processB(pthread_spinlock_t lockA, pthread_spinlock_t lockB, int ret1)
     while (loop < LOOP_SIZE)
     {
         ret1 = pthread_spin_lock(&lockB);
-        //memcpy(&valsTmp, str, sizeof(valsTmp));
-        //wasSent = valsTmp;
-        // if(!wasSent){
-        //     while (!wasSent)
-        //     {
-        //         //printf("\nProc B: wait for the spinlock...");
-        //         memcpy(&valsTmp, str, sizeof(valsTmp));
-        //         wasSent = valsTmp[len];
-        //         //std::cout<<"\nB recieved "<<wasSent<<std::endl;
-        //         ret1 = pthread_spin_unlock(&lockB);
-        //         //sleep(1); 
-        //         //std::cout<<"loop in B "<<loop<<std::endl;
-        //         ret1 = pthread_spin_lock(&lockB);
-        //     }
-        //     loop++;
-        // }
+        
+        memcpy(&valsTmp, str, sizeof(valsTmp));
+        wasSent = valsTmp;
+        if(!wasSent){
+            while (!wasSent)
+            {
+                //printf("\nProc B: wait for the spinlock...");
+                memcpy(&valsTmp, str, sizeof(valsTmp));
+                wasSent = valsTmp[len];
+                //std::cout<<"\nB recieved "<<wasSent<<std::endl;
+                ret1 = pthread_spin_unlock(&lockB);
+                //sleep(1); 
+                //std::cout<<"loop in B "<<loop<<std::endl;
+                ret1 = pthread_spin_lock(&lockB);
+            }
+            loop++;
+        }
         //pthread_spin_lock(&lockB);
         //ret1 = pthread_spin_lock(&lock);
         //printf("Proc B: made it past while\n");
