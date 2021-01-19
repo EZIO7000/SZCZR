@@ -36,7 +36,7 @@ void initSharedMemory()
     unsigned char *str = (unsigned char *)shmat(shmid, (void *)0, 0);
 }
 
-void processA(pthread_spinlock_t lockA, pthread_spinlock_t lockB, int ret)
+void processA(pthread_spinlock_t lockA,/* pthread_spinlock_t lockB,*/ int ret)
 {
 
     pthread_spin_lock(&lockA);
@@ -68,7 +68,7 @@ void processA(pthread_spinlock_t lockA, pthread_spinlock_t lockB, int ret)
         memcpy( &vals,str, sizeof(vals));
         vals[len] = wasSent;
         
-       std::cout << "A" << std::endl;
+       // std::cout << "A" << std::endl;
         if(wasSent)
         {
             while (wasSent)
@@ -76,13 +76,13 @@ void processA(pthread_spinlock_t lockA, pthread_spinlock_t lockB, int ret)
                 //printf("\nProc A: wait for the spinlock...");
                 ret = pthread_spin_unlock(&lockA);
                 //sleep(3); 
+                ret = pthread_spin_lock(&lockA);
                 memcpy( &vals,str, sizeof(vals));
                 wasSent = vals[len];
                 //std::cout<<std::endl<<"loop nr in a"<<a<<"  "<<wasSent;
-                ret = pthread_spin_lock(&lockA);
+                //ret = pthread_spin_lock(&lockA);
             }   
         }
-
         std::chrono::time_point<std::chrono::system_clock> startTime = std::chrono::system_clock::now();
         auto duration = startTime.time_since_epoch();
         auto nano = std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
@@ -91,8 +91,7 @@ void processA(pthread_spinlock_t lockA, pthread_spinlock_t lockB, int ret)
         wasSent = true;
         vals[len] = wasSent;
         memcpy(str, vals, sizeof(vals));
-        //ret = pthread_spin_unlock(&lockA);
-        ret = pthread_spin_unlock(&lockB);
+        ret = pthread_spin_unlock(&lockA);
         
         //std::cout<<std::endl<< "A sent" <<wasSent<< std::endl;
         a++;
@@ -101,7 +100,7 @@ void processA(pthread_spinlock_t lockA, pthread_spinlock_t lockB, int ret)
     shmdt(str); // <- to poza petla powinno byc nie? po unlock'u
 }
 
-void processB(pthread_spinlock_t lockA, pthread_spinlock_t lockB, int ret1)
+void processB(/*pthread_spinlock_t lockA,*/ pthread_spinlock_t lockB, int ret1)
 {
     
 
@@ -169,21 +168,21 @@ void processB(pthread_spinlock_t lockA, pthread_spinlock_t lockB, int ret1)
     std::printf("loop;microseconds;\n");
     while (loop < LOOP_SIZE)
     {
-        ret1 = pthread_spin_lock(&lockB);
-        
-        memcpy(&valsTmp, str, sizeof(valsTmp));
-        wasSent = valsTmp;
+        //memcpy(&valsTmp, str, sizeof(valsTmp));
+        //wasSent = valsTmp;
+
+        ret = pthread_spin_lock(&lockB);
+        memcpy( &vals,str, sizeof(vals));
+        vals[len] = wasSent;
+
         if(!wasSent){
             while (!wasSent)
             {
-                //printf("\nProc B: wait for the spinlock...");
-                memcpy(&valsTmp, str, sizeof(valsTmp));
-                wasSent = valsTmp[len];
-                //std::cout<<"\nB recieved "<<wasSent<<std::endl;
                 ret1 = pthread_spin_unlock(&lockB);
-                //sleep(1); 
-                //std::cout<<"loop in B "<<loop<<std::endl;
+                //sleep(3); 
                 ret1 = pthread_spin_lock(&lockB);
+                memcpy( &vals,str, sizeof(vals));
+                wasSent = vals[len];
             }
             loop++;
         }
@@ -224,8 +223,7 @@ void processB(pthread_spinlock_t lockA, pthread_spinlock_t lockB, int ret1)
         std::printf("%i;%ld;\n", loop, (endTime - startTime));
 
         //endloop
-        //ret1 = pthread_spin_unlock(&lockB);
-        ret1 = pthread_spin_unlock(&lockA);
+        ret1 = pthread_spin_unlock(&lockB);
     }
 
     shmdt(str);
@@ -263,7 +261,7 @@ int main()
     //creating new process
     if (fork() == 0)
     {
-        processA(lockA, lockB  ,ret);
+        processA(lockA,  ret);
         exit(0);
     }
 
@@ -274,7 +272,7 @@ int main()
     //creating new process
     if (fork() == 0)
     {
-        processB(lockA, lockB ,ret);
+        processB(lockA, ret);
         exit(0);
     }
 
