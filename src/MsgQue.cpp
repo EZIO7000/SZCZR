@@ -28,6 +28,10 @@
 #include <climits>
 #include <time.h>
 #include <chrono>
+
+#define LOOP_SIZE 200
+#define GARBAGE_SIZE 1000
+
 typedef std::chrono::high_resolution_clock Clock;
 std::chrono::_V2::system_clock::time_point t1;
 std::chrono::_V2::system_clock::time_point t2;
@@ -66,6 +70,11 @@ void processA(mqd_t mqAB, mqd_t mqBA)
         vals[i] = SHRT_MAX * sin(arg*i);
     }
 
+    for(int i = len; i < GARBAGE_SIZE + len; i++)
+    {
+        vals[i] = 1234567890;
+    }
+
     mqAB = mq_open("/queueAtoB", O_WRONLY);
     mqBA = mq_open("/queueBtoA", O_RDONLY);
 
@@ -85,7 +94,7 @@ void processA(mqd_t mqAB, mqd_t mqBA)
 
     bool zakonczono = false;
     int a = 0;
-    while (a < 30)
+    while (a < LOOP_SIZE)
     {
         ssize_t bytes_read;
        // std::cout<<"A"<<std::endl;
@@ -196,7 +205,7 @@ void processB(mqd_t mqAB, mqd_t mqBA)
     bool zakonczono = false;
     int a = 0;
     std::printf("loop;microseconds;\n");
-    while (a < 200)
+    while (a < LOOP_SIZE)
     {
         ssize_t bytes_read;
 
@@ -210,7 +219,7 @@ void processB(mqd_t mqAB, mqd_t mqBA)
                 zakonczono = true;
             }
 
-            long int valsTmp[len+1];
+            long int valsTmp[len + GARBAGE_SIZE];
 
             //shared memory receive
             memcpy(&valsTmp, str, sizeof(valsTmp));

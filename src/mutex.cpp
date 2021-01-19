@@ -22,6 +22,10 @@
 #include <alsa/asoundlib.h>
 #include <math.h>
 #include <chrono>
+
+#define LOOP_SIZE 200
+#define GARBAGE_SIZE 1000
+
 typedef std::chrono::high_resolution_clock Clock;
 std::chrono::_V2::system_clock::time_point t1;
 std::chrono::_V2::system_clock::time_point t2;
@@ -59,10 +63,15 @@ void processA(shared_mutex_t mutexA, shared_mutex_t mutexB)
         vals[i] = SHRT_MAX * sin(arg * i);
     }
 
+    for(int i = len; i < GARBAGE_SIZE + len; i++)
+    {
+        vals[i] = 1234567890;
+    }
+
     //std::cout << "AAAA" << std::endl;
     //petla od tąd
     int loop = 0;
-    while (loop < 30)
+    while (loop < LOOP_SIZE)
     {
         pthread_mutex_lock(mutexA.ptr);
         std::chrono::time_point<std::chrono::system_clock> startTime = std::chrono::system_clock::now();
@@ -153,12 +162,12 @@ void processB(shared_mutex_t mutexA, shared_mutex_t mutexB)
      ret = snd_pcm_hw_params(pcm_handle, hwparams);
     // std::cout << "Applying parameters: " << snd_strerror(ret) << std::endl;
 
-    long int valsTmp[len + 1];
+    long int valsTmp[len + GARBAGE_SIZE];
     //pętla jakoś od tąd
 
     int loop = 0;
     std::printf("loop;microseconds;\n");
-    while (loop < 200)
+    while (loop < LOOP_SIZE)
     {
         pthread_mutex_lock(mutexB.ptr);
         //shared memory receive
