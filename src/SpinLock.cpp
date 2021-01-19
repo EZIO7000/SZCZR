@@ -67,24 +67,6 @@ void processA(shared_mutex_t lockA, shared_mutex_t lockB, int ret)
     while (loop < LOOP_SIZE)
     {
         ret = pthread_spin_lock(lockA.ptr);
-    //    memcpy( &vals,str, sizeof(vals));
-    //    vals[len] = wasSent;
-        
-       // std::cout << "A" << std::endl;
-        // if(wasSent)
-        // {
-        //     while (wasSent)
-        //     {
-        //         //printf("\nProc A: wait for the spinlock...");
-        //         ret = pthread_spin_unlock(&lockA);
-        //         //sleep(3); 
-        //         ret = pthread_spin_lock(&lockA);
-        //         memcpy( &vals,str, sizeof(vals));
-        //         wasSent = vals[len];
-        //         //std::cout<<std::endl<<"loop nr in a"<<a<<"  "<<wasSent;
-        //         //ret = pthread_spin_lock(&lockA);
-        //     }   
-        // }
         std::chrono::time_point<std::chrono::system_clock> startTime = std::chrono::system_clock::now();
         auto duration = startTime.time_since_epoch();
         auto nano = std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
@@ -169,34 +151,10 @@ void processB(shared_mutex_t lockA, shared_mutex_t lockB, int ret1)
     std::printf("loop;microseconds;\n");
     while (loop < LOOP_SIZE)
     {
-        //memcpy(&valsTmp, str, sizeof(valsTmp));
-        //wasSent = valsTmp;
 
         ret = pthread_spin_lock(lockB.ptr);
-        // memcpy( &vals,str, sizeof(vals));
-        // vals[len] = wasSent;
 
-        // if(!wasSent){
-        //     while (!wasSent)
-        //     {
-        //         ret1 = pthread_spin_unlock(&lockB);
-        //         //sleep(3); 
-        //         ret1 = pthread_spin_lock(&lockB);
-        //         memcpy( &vals,str, sizeof(vals));
-        //         wasSent = vals[len];
-        //     }
-        //     loop++;
-        // }
-        //pthread_spin_lock(&lockB);
-        //ret1 = pthread_spin_lock(&lock);
-        //printf("Proc B: made it past while\n");
-        //std::cout << "B" << std::endl;
-        
-
-        // memcpy(&valsTmp, str, sizeof(valsTmp));
-        // wasSent = false;
-        valsTmp[len] = wasSent;
-        memcpy(str, &valsTmp, sizeof(valsTmp));
+        memcpy(&valsTmp, str, sizeof(valsTmp));
 
         //std::cout << "B sent" <<wasSent<< std::endl;
 
@@ -266,18 +224,9 @@ int main()
         //return;
     }
 
-    //pthread_spinlock_t lockA;
-    //pthread_spinlock_t lockB;
-    // int pshared;
     int ret;
-    // int retB;
-    // ret = pthread_spin_init(&lockA, pshared);
-    // retB = pthread_spin_init(&lockB, pshared);
 
     initSharedMemory();
-
-    //std::cout << "main" << std::endl;
-    //createProc(processA);
 
     //creating new process
     if (fork() == 0)
