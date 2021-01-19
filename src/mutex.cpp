@@ -157,7 +157,7 @@ void processB(shared_mutex_t mutexA, shared_mutex_t mutexB)
     //pętla jakoś od tąd
 
     int loop = 0;
-    while (loop < 30)
+    while (loop < 200)
     {
         pthread_mutex_lock(mutexB.ptr);
         //shared memory receive

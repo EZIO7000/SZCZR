@@ -156,7 +156,7 @@ void processB(/*pthread_spinlock_t lockA,*/ pthread_spinlock_t lockB, int ret1)
     //memcpy(&valsTmp, str, sizeof(valsTmp));
     //wasSent = valsTmp;
     int loop = 0;
-    while (loop < 30)
+    while (loop < 200)
     {
         //memcpy(&valsTmp, str, sizeof(valsTmp));
         //wasSent = valsTmp;

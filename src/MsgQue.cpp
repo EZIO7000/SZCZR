@@ -195,7 +195,7 @@ void processB(mqd_t mqAB, mqd_t mqBA)
 
     bool zakonczono = false;
     int a = 0;
-    while (a < 30)
+    while (a < 200)
     {
         ssize_t bytes_read;
 
