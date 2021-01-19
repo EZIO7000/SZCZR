@@ -67,8 +67,8 @@ void processA(shared_mutex_t lockA, shared_mutex_t lockB, int ret)
     while (loop < LOOP_SIZE)
     {
         ret = pthread_spin_lock(lockA.ptr);
-        memcpy( &vals,str, sizeof(vals));
-        vals[len] = wasSent;
+    //    memcpy( &vals,str, sizeof(vals));
+    //    vals[len] = wasSent;
         
        // std::cout << "A" << std::endl;
         // if(wasSent)
