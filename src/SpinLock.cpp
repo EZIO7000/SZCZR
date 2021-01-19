@@ -23,6 +23,8 @@
 #include <climits>
 #include <alsa/asoundlib.h>
 
+#include "shared_spinlock.h"
+
 #include <chrono>
 
 #define LOOP_SIZE 200
@@ -36,10 +38,10 @@ void initSharedMemory()
     unsigned char *str = (unsigned char *)shmat(shmid, (void *)0, 0);
 }
 
-void processA(pthread_spinlock_t lockA,/* pthread_spinlock_t lockB,*/ int ret)
+void processA(shared_mutex_t lockA, shared_mutex_t lockB, int ret)
 {
 
-    pthread_spin_lock(&lockA);
+    //pthread_spin_lock(lockA.ptr);
     key_t key = ftok("shmfile", 65);
     int shmid = shmget(key, 32000000, 0666 | IPC_CREAT);
     unsigned char *str = (unsigned char *)shmat(shmid, (void *)0, 0);
@@ -61,28 +63,28 @@ void processA(pthread_spinlock_t lockA,/* pthread_spinlock_t lockB,*/ int ret)
     }
 
     // loop from here I guess idk
-    int a = 0;
-    while (a < LOOP_SIZE)
+    int loop = 0;
+    while (loop < LOOP_SIZE)
     {
-        ret = pthread_spin_lock(&lockA);
+        ret = pthread_spin_lock(lockA.ptr);
         memcpy( &vals,str, sizeof(vals));
         vals[len] = wasSent;
         
        // std::cout << "A" << std::endl;
-        if(wasSent)
-        {
-            while (wasSent)
-            {
-                //printf("\nProc A: wait for the spinlock...");
-                ret = pthread_spin_unlock(&lockA);
-                //sleep(3); 
-                ret = pthread_spin_lock(&lockA);
-                memcpy( &vals,str, sizeof(vals));
-                wasSent = vals[len];
-                //std::cout<<std::endl<<"loop nr in a"<<a<<"  "<<wasSent;
-                //ret = pthread_spin_lock(&lockA);
-            }   
-        }
+        // if(wasSent)
+        // {
+        //     while (wasSent)
+        //     {
+        //         //printf("\nProc A: wait for the spinlock...");
+        //         ret = pthread_spin_unlock(&lockA);
+        //         //sleep(3); 
+        //         ret = pthread_spin_lock(&lockA);
+        //         memcpy( &vals,str, sizeof(vals));
+        //         wasSent = vals[len];
+        //         //std::cout<<std::endl<<"loop nr in a"<<a<<"  "<<wasSent;
+        //         //ret = pthread_spin_lock(&lockA);
+        //     }   
+        // }
         std::chrono::time_point<std::chrono::system_clock> startTime = std::chrono::system_clock::now();
         auto duration = startTime.time_since_epoch();
         auto nano = std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
@@ -90,17 +92,16 @@ void processA(pthread_spinlock_t lockA,/* pthread_spinlock_t lockB,*/ int ret)
 
         wasSent = true;
         vals[len] = wasSent;
-        memcpy(str, vals, sizeof(vals));
-        ret = pthread_spin_unlock(&lockA);
-        
+        memcpy(str, vals, sizeof(vals));  
         //std::cout<<std::endl<< "A sent" <<wasSent<< std::endl;
-        a++;
+        loop++;
+        ret = pthread_spin_unlock(lockB.ptr);
     }
 
     shmdt(str); // <- to poza petla powinno byc nie? po unlock'u
 }
 
-void processB(/*pthread_spinlock_t lockA,*/ pthread_spinlock_t lockB, int ret1)
+void processB(shared_mutex_t lockA, shared_mutex_t lockB, int ret1)
 {
     
 
@@ -171,29 +172,29 @@ void processB(/*pthread_spinlock_t lockA,*/ pthread_spinlock_t lockB, int ret1)
         //memcpy(&valsTmp, str, sizeof(valsTmp));
         //wasSent = valsTmp;
 
-        ret = pthread_spin_lock(&lockB);
-        memcpy( &vals,str, sizeof(vals));
-        vals[len] = wasSent;
+        ret = pthread_spin_lock(lockB.ptr);
+        // memcpy( &vals,str, sizeof(vals));
+        // vals[len] = wasSent;
 
-        if(!wasSent){
-            while (!wasSent)
-            {
-                ret1 = pthread_spin_unlock(&lockB);
-                //sleep(3); 
-                ret1 = pthread_spin_lock(&lockB);
-                memcpy( &vals,str, sizeof(vals));
-                wasSent = vals[len];
-            }
-            loop++;
-        }
+        // if(!wasSent){
+        //     while (!wasSent)
+        //     {
+        //         ret1 = pthread_spin_unlock(&lockB);
+        //         //sleep(3); 
+        //         ret1 = pthread_spin_lock(&lockB);
+        //         memcpy( &vals,str, sizeof(vals));
+        //         wasSent = vals[len];
+        //     }
+        //     loop++;
+        // }
         //pthread_spin_lock(&lockB);
         //ret1 = pthread_spin_lock(&lock);
         //printf("Proc B: made it past while\n");
         //std::cout << "B" << std::endl;
         
 
-        memcpy(&valsTmp, str, sizeof(valsTmp));
-        wasSent = false;
+        // memcpy(&valsTmp, str, sizeof(valsTmp));
+        // wasSent = false;
         valsTmp[len] = wasSent;
         memcpy(str, &valsTmp, sizeof(valsTmp));
 
@@ -222,9 +223,15 @@ void processB(/*pthread_spinlock_t lockA,*/ pthread_spinlock_t lockB, int ret1)
         snd_pcm_writei(pcm_handle, ptra, len / 4);
         std::printf("%i;%ld;\n", loop, (endTime - startTime));
 
+        loop++;
         //endloop
-        ret1 = pthread_spin_unlock(&lockB);
+        ret1 = pthread_spin_unlock(lockA.ptr);
     }
+
+    shared_mutex_close(lockA);
+    shared_mutex_destroy(lockA);
+    shared_mutex_close(lockB);
+    shared_mutex_destroy(lockB);
 
     shmdt(str);
     shmctl(shmid, IPC_RMID, NULL);
@@ -243,15 +250,29 @@ int main()
 {
     // INSTRUKCJA DO ODPALENIA
     // g++ src/SpinLock.cpp -pthread -o SpinLock  -lstdc++ -pthread -lrt -lasound
+    // g++ SpinLock.cpp shared_spinlock.c -pthread -lstdc++ -pthread -lrt -lm -lasound -o SpinLock
     // ./SpinLock
 
-    pthread_spinlock_t lockA;
-    pthread_spinlock_t lockB;
-    int pshared;
+    shared_mutex_t lockA = shared_mutex_init("/my-lockA");
+    if (lockA.ptr == NULL)
+    {
+        std::cout << "Could not initialise mutex" << std::endl;
+        //return;
+    }
+    shared_mutex_t lockB = shared_mutex_init("/my-lockB");
+    if (lockB.ptr == NULL)
+    {
+        std::cout << "Could not initialise mutex" << std::endl;
+        //return;
+    }
+
+    //pthread_spinlock_t lockA;
+    //pthread_spinlock_t lockB;
+    // int pshared;
     int ret;
-    int retB;
-    ret = pthread_spin_init(&lockA, pshared);
-    retB = pthread_spin_init(&lockA, pshared);
+    // int retB;
+    // ret = pthread_spin_init(&lockA, pshared);
+    // retB = pthread_spin_init(&lockB, pshared);
 
     initSharedMemory();
 
@@ -261,7 +282,7 @@ int main()
     //creating new process
     if (fork() == 0)
     {
-        processA(lockA,  ret);
+        processA(lockA, lockB , ret);
         exit(0);
     }
 
@@ -272,7 +293,7 @@ int main()
     //creating new process
     if (fork() == 0)
     {
-        processB(lockA, ret);
+        processB(lockA, lockB, ret);
         exit(0);
     }
 
@@ -281,9 +302,6 @@ int main()
     while (wait(NULL) > 0)
     {
     }
-
-    ret = pthread_spin_destroy(&lockA);
-    retB = pthread_spin_destroy(&lockB);
 
     return 0;
 }
