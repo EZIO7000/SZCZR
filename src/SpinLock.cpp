@@ -64,9 +64,11 @@ void processA(shared_mutex_t lockA, shared_mutex_t lockB, int ret)
 
     // loop from here I guess idk
     int loop = 0;
+    
     while (loop < LOOP_SIZE)
     {
         ret = pthread_spin_lock(lockA.ptr);
+        
         std::chrono::time_point<std::chrono::system_clock> startTime = std::chrono::system_clock::now();
         auto duration = startTime.time_since_epoch();
         auto nano = std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
@@ -148,12 +150,12 @@ void processB(shared_mutex_t lockA, shared_mutex_t lockB, int ret1)
     //memcpy(&valsTmp, str, sizeof(valsTmp));
     //wasSent = valsTmp;
     int loop = 0;
-    std::printf("loop;microseconds;\n");
+    
     while (loop < LOOP_SIZE)
     {
 
         ret = pthread_spin_lock(lockB.ptr);
-
+        
         memcpy(&valsTmp, str, sizeof(valsTmp));
 
         std::cout<<std::endl<< "B recived" << std::endl;
@@ -209,6 +211,7 @@ int main()
     // g++ SpinLock.cpp shared_spinlock.c -pthread -lstdc++ -pthread -lrt -lm -lasound -o SpinLock
     // ./SpinLock
 
+    //shared_mutex_destroy("/my-lockA");
     shared_mutex_t lockA = shared_mutex_init("/my-lockA");
     if (lockA.ptr == NULL)
     {
@@ -221,6 +224,9 @@ int main()
         std::cout << "Could not initialise mutex" << std::endl;
         //return;
     }
+
+    pthread_spin_unlock(lockA.ptr);
+    pthread_spin_unlock(lockB.ptr);
 
     int ret;
 
