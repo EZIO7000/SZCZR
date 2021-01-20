@@ -40,8 +40,6 @@ void initSharedMemory()
 
 void processA(shared_mutex_t lockA, shared_mutex_t lockB, int ret)
 {
-
-    //pthread_spin_lock(lockA.ptr);
     key_t key = ftok("shmfile", 65);
     int shmid = shmget(key, 32000000, 0666 | IPC_CREAT);
     unsigned char *str = (unsigned char *)shmat(shmid, (void *)0, 0);
@@ -61,8 +59,6 @@ void processA(shared_mutex_t lockA, shared_mutex_t lockB, int ret)
     {
         vals[i] = 1234567890;
     }
-
-    // loop from here I guess idk
     int loop = 0;
     
     while (loop < LOOP_SIZE)
@@ -82,7 +78,7 @@ void processA(shared_mutex_t lockA, shared_mutex_t lockB, int ret)
         ret = pthread_spin_unlock(lockB.ptr);
     }
 
-    shmdt(str); // <- to poza petla powinno byc nie? po unlock'u
+    shmdt(str); 
 }
 
 void processB(shared_mutex_t lockA, shared_mutex_t lockB, int ret1)
@@ -144,11 +140,7 @@ void processB(shared_mutex_t lockA, shared_mutex_t lockB, int ret1)
     ret = snd_pcm_hw_params(pcm_handle, hwparams);
     //std::cout << "Applying parameters: " << snd_strerror(ret) << std::endl;
 
-    // loop from here
-    //std::cout<<pthread_spin_lock(&lockB);
     long int valsTmp[len + GARBAGE_SIZE];
-    //memcpy(&valsTmp, str, sizeof(valsTmp));
-    //wasSent = valsTmp;
     int loop = 0;
     
     while (loop < LOOP_SIZE)
@@ -157,8 +149,6 @@ void processB(shared_mutex_t lockA, shared_mutex_t lockB, int ret1)
         ret = pthread_spin_lock(lockB.ptr);
         
         memcpy(&valsTmp, str, sizeof(valsTmp));
-
-        std::cout<<std::endl<< "B recived" << std::endl;
 
         for (int i = 0; i < len; i = i + 1)
         {
@@ -173,7 +163,6 @@ void processB(shared_mutex_t lockA, shared_mutex_t lockB, int ret1)
         int err;
         const void *ptra = (const void *)&vals;
         err = snd_pcm_prepare(pcm_handle);
-        //std::cout << "Preparing: " << snd_strerror(err)<< std::endl;
         while (err != 0)
         {
             err = snd_pcm_prepare(pcm_handle);
@@ -182,7 +171,6 @@ void processB(shared_mutex_t lockA, shared_mutex_t lockB, int ret1)
         std::printf("%i;%ld;\n", loop, (endTime - startTime));
 
         loop++;
-        //endloop
         ret1 = pthread_spin_unlock(lockA.ptr);
     }
 
@@ -206,23 +194,15 @@ void createProc(void (*function)())
 
 int main()
 {
-    // INSTRUKCJA DO ODPALENIA
-    // g++ src/SpinLock.cpp -pthread -o SpinLock  -lstdc++ -pthread -lrt -lasound
-    // g++ SpinLock.cpp shared_spinlock.c -pthread -lstdc++ -pthread -lrt -lm -lasound -o SpinLock
-    // ./SpinLock
-
-    //shared_mutex_destroy("/my-lockA");
     shared_mutex_t lockA = shared_mutex_init("/my-lockA");
     if (lockA.ptr == NULL)
     {
         std::cout << "Could not initialise mutex" << std::endl;
-        //return;
     }
     shared_mutex_t lockB = shared_mutex_init("/my-lockB");
     if (lockB.ptr == NULL)
     {
         std::cout << "Could not initialise mutex" << std::endl;
-        //return;
     }
 
     pthread_spin_unlock(lockA.ptr);
@@ -232,25 +212,20 @@ int main()
 
     initSharedMemory();
 
-    //creating new process
     if (fork() == 0)
     {
         processA(lockA, lockB , ret);
         exit(0);
     }
 
-    //std::cout << "main" << std::endl;
     sleep(1);
-    //createProc(processB);
 
-    //creating new process
     if (fork() == 0)
     {
         processB(lockA, lockB, ret);
         exit(0);
     }
 
-    //std::cout << "main" << std::endl;
 
     while (wait(NULL) > 0)
     {

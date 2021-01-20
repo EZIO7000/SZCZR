@@ -47,7 +47,6 @@ void initSharedMemory()
     unsigned char *str = (unsigned char *)shmat(shmid, (void *)0, 0);
 }
 
-//void processA(mqd_t mqAB, mqd_t mqBA, mq_attr attr)
 void processA(mqd_t mqAB, mqd_t mqBA)
 {
     char buffer[sizeof(int)];
@@ -63,7 +62,6 @@ void processA(mqd_t mqAB, mqd_t mqBA)
     long unsigned int bufferSize = 4087*4;
     const uint16_t len = bufferSize*16;
     const float_t arg = 2 * 3.141592 * freq / rate;
-    //uint16_t vals[len + 1]; //1 na czas rozpoczecia
     long int vals[len + GARBAGE_SIZE];
     for(uint16_t i = 0; i < len; i = i + 1) {
         vals[i] = SHRT_MAX * sin(arg*i);
@@ -77,15 +75,10 @@ void processA(mqd_t mqAB, mqd_t mqBA)
     mqAB = mq_open("/queueAtoB", O_WRONLY);
     mqBA = mq_open("/queueBtoA", O_RDONLY);
 
-    //auto startTime = std::chrono::system_clock::now();
-    // startTime = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
     std::chrono::time_point<std::chrono::system_clock> startTime = std::chrono::system_clock::now();
     auto duration = startTime.time_since_epoch();
     auto nano = std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
     vals[len] = nano;
-    //clock_t startTime = clock();
-  //  vals[len] = startTime;
-    //std::cout << "Zczytalo czas rozpoczecia: " << vals[len] << std::endl;
     memcpy(str, vals, sizeof(vals));
 
     memset(buffer, 0, sizeof(int));
@@ -96,10 +89,7 @@ void processA(mqd_t mqAB, mqd_t mqBA)
     while (a < LOOP_SIZE)
     {
         ssize_t bytes_read;
-       // std::cout<<"A"<<std::endl;
         bytes_read = mq_receive(mqBA, buffer, sizeof(int), NULL);
-        //clck = clock();
-    //    startTime = clock();
         t1 = Clock::now();
         if (bytes_read > 0)
         {
@@ -109,22 +99,13 @@ void processA(mqd_t mqAB, mqd_t mqBA)
                 zakonczono = true;
             }
 
-            //startTime = clock();
-        //    startTime = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-            // TU JEST PRZESYLANIE DO PAMIECI WSPOLDZIELONEJ!!!!! i ma byc w tab val takze startTime
-        //    vals[len] = startTime;
-
             startTime = std::chrono::system_clock::now();
             auto duration = startTime.time_since_epoch();
             auto nano = std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
             vals[len] = nano;
-        //    vals[len] = 100000;
-        //    std::cout << "Czas w A: " << nano << std::endl;
-
-            //std::cout << "Zczytalo czas rozpoczecia: " << vals[len] << std::endl;
             memcpy(str, vals, sizeof(vals));
 
-            //shared memory send
+
             memset(buffer, 0, sizeof(int));
             mq_send(mqAB, buffer, sizeof(int), 0);
 
@@ -136,7 +117,6 @@ void processA(mqd_t mqAB, mqd_t mqBA)
     shmctl(shmid, IPC_RMID, NULL);
 }
 
-//void processB(mqd_t mqAB, mqd_t mqBA, mq_attr attr)
 void processB(mqd_t mqAB, mqd_t mqBA)
 {
     char buffer[sizeof(int) + 1];
@@ -208,7 +188,6 @@ void processB(mqd_t mqAB, mqd_t mqBA)
         ssize_t bytes_read;
 
         bytes_read = mq_receive(mqAB, buffer, sizeof(int), NULL);
-       // std::cout<<"B"<<std::endl;
         if (bytes_read > 0)
         {
             if (!strncmp(buffer, "111", strlen("111")))
@@ -218,8 +197,6 @@ void processB(mqd_t mqAB, mqd_t mqBA)
             }
 
             long int valsTmp[len + GARBAGE_SIZE];
-
-            //shared memory receive
             memcpy(&valsTmp, str, sizeof(valsTmp));
 
             clock_t startTime = valsTmp[len];
@@ -232,31 +209,18 @@ void processB(mqd_t mqAB, mqd_t mqBA)
             auto duration = endTimeTmp.time_since_epoch();
             auto endTime = std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
             
-            //clck = clock() - clck;
-            //std::cout << "Odczytalo czas rozpoczecia: " << vals[len] << std::endl;
-            //clock_t endTime = clock();
-        //    std::time_t endTime = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-            //std::cout << "Zczytalo czas zakonczenia: " << endTime << std::endl;
             t2 = Clock::now();
              int err;
              const void* ptra = (const void*)&vals;
             err = snd_pcm_prepare(pcm_handle);
-            //std::cout << "Preparing: " << snd_strerror(err)
-            //   << std::endl;
             while(err!=0)
             {   
                 err = snd_pcm_prepare(pcm_handle); 
-                //std::cout<<"AA"; 
             }
             snd_pcm_writei(pcm_handle, ptra, len/4);
-        //    std::printf("loop nr %i ;%ld clicks; %f seconds\n",a,clck,((float)clck)/CLOCKS_PER_SEC);
 
         
-        std::printf("loop nr %i ;%ld;\n",a,(endTime - startTime));
-        //    std::cout << "start time: " << startTime << "  end time: " << endTime << std::endl;
-        //    std::cout<<"time measured by better clock on loop "<<a<<": "<<
-        //    std::chrono::duration_cast<std::chrono::nanoseconds>(t2-t1).count()<<std::endl;
-            //shared memory send
+            std::printf("loop nr %i ;%ld;\n",a,(endTime - startTime));
 
             memset(buffer, 0, sizeof(int));
             mq_send(mqBA, buffer, sizeof(int), 0);
@@ -280,12 +244,6 @@ void createProc(void (*function)())
 
 int main()
 {
-    // INSTRUKCJA DO ODPALENIA
-    // g++ src/MsgQue.cpp -pthread -o MsgQue  -lstdc++ -pthread -lrt -lasound
-    // ./MsgQue
-
-    //mqd_t mqdes = mq_open("/msgque", O_RDWR);
-
     mq_unlink("/queueBtoA");
     mq_unlink("/queueAtoB");
 
@@ -293,7 +251,7 @@ int main()
 
     mqd_t mqAB;              // message queue
     mqd_t mqBA;
-    /*struct*/ mq_attr attr; // message attributes
+    mq_attr attr; // message attributes
 
     attr.mq_flags = 0;
     attr.mq_maxmsg = 10;
@@ -303,39 +261,22 @@ int main()
     clock_t startTime = 0;
     clock_t endTime;
 
-    //std::cout << "main" << std::endl;
-    //createProc(processA);
     mqBA = mq_open("/queueBtoA", O_CREAT, 0644, &attr);
     mqAB = mq_open("/queueAtoB", O_CREAT, 0644, &attr);
-    //creating new process
     if (fork() == 0)
     {
-        //mqAB = mq_open("/queueAtoB", O_WRONLY);
-        //mqBA = mq_open("/queueBtoA", O_CREAT | O_RDONLY, 0644, &attr);
-
         processA(mqAB, mqBA);
         exit(0);
     }
 
-    //std::cout << "main" << std::endl;
-    //sleep(3);
-    //createProc(processB);
-
-    //creating new process
     if (fork() == 0)
     {
-        //mqBA = mq_open("/queueBtoA", O_WRONLY);
-        //mqAB = mq_open("/queueAtoB", O_CREAT | O_RDONLY, 0644, &attr);
-
         processB(mqAB, mqBA);
         exit(0);
     }
 
-    //std::cout << "main" << std::endl;
-
     while (wait(NULL) > 0)
     {
-        //std::cout << "a";
     }
     
     mq_unlink("/queueBtoA");

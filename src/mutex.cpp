@@ -40,13 +40,6 @@ void initSharedMemory()
 
 void processA(shared_mutex_t mutexA, shared_mutex_t mutexB)
 {
-    // shared_mutex_t mutex = shared_mutex_init("/my-mutex");
-    // if (mutex.ptr == NULL)
-    // {
-    //     std::cout << "Could not initialise mutex" << std::endl;
-    //     return;
-    // }
-
     key_t key = ftok("shmfile", 65);
     int shmid = shmget(key, 32000000, 0666 | IPC_CREAT);
     unsigned char *str = (unsigned char *)shmat(shmid, (void *)0, 0);
@@ -67,8 +60,6 @@ void processA(shared_mutex_t mutexA, shared_mutex_t mutexB)
         vals[i] = 1234567890;
     }
 
-    //std::cout << "AAAA" << std::endl;
-    //petla od tąd
     int loop = 0;
     while (loop < LOOP_SIZE)
     {
@@ -77,19 +68,12 @@ void processA(shared_mutex_t mutexA, shared_mutex_t mutexB)
         auto duration = startTime.time_since_epoch();
         auto nano = std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
         vals[len] = nano;
-        // pthread_mutex_lock(mutex.ptr);
         memcpy(str, vals, sizeof(vals));
-        //std::cout << "A" << std::endl;
-        // pthread_mutex_unlock(mutex.ptr);
 
         loop++;
         pthread_mutex_unlock(mutexB.ptr);
     }
-    //sleep(20);
     shmdt(str);
-
-    //pthread_mutex_unlock(mutex.ptr);
-    //shared_mutex_close(mutex);
 }
 
 void processB(shared_mutex_t mutexA, shared_mutex_t mutexB)
@@ -117,7 +101,6 @@ void processB(shared_mutex_t mutexA, shared_mutex_t mutexB)
     }
 
     std::cout << "BBBB" << std::endl;
-    // pthread_mutex_lock(mutex.ptr);
     memcpy(&vals, str, sizeof(vals));
 
      snd_pcm_hw_params_alloca(&hwparams);
@@ -154,14 +137,12 @@ void processB(shared_mutex_t mutexA, shared_mutex_t mutexB)
     // std::cout << "Applying parameters: " << snd_strerror(ret) << std::endl;
 
     long int valsTmp[len + GARBAGE_SIZE];
-    //pętla jakoś od tąd
 
     int loop = 0;
     std::printf("loop;microseconds;\n");
     while (loop < LOOP_SIZE)
     {
         pthread_mutex_lock(mutexB.ptr);
-        //shared memory receive
         memcpy(&valsTmp, str, sizeof(valsTmp));
 
         clock_t startTime = valsTmp[len];
@@ -178,7 +159,6 @@ void processB(shared_mutex_t mutexA, shared_mutex_t mutexB)
         int err;
         const void *ptra = (const void *)&vals;
         err = snd_pcm_prepare(pcm_handle);
-        // std::cout << "Preparing: " << snd_strerror(err) << std::endl;
          while (err != 0)
          {
              err = snd_pcm_prepare(pcm_handle);
@@ -188,7 +168,6 @@ void processB(shared_mutex_t mutexA, shared_mutex_t mutexB)
         std::printf("%i;%ld;\n", loop, (endTime - startTime));
 
         loop++;
-        //pthread_mutex_unlock(mutex.ptr);
         pthread_mutex_unlock(mutexA.ptr);
     }
 
@@ -199,8 +178,6 @@ void processB(shared_mutex_t mutexA, shared_mutex_t mutexB)
 
     shmdt(str);
     shmctl(shmid, IPC_RMID, NULL);
-    //shared_mutex_close(mutex);
-    //shared_mutex_destroy(mutex);
 }
 
 void createProc(void (*function)())
@@ -211,25 +188,22 @@ void createProc(void (*function)())
         exit(0);
     }
 }
-// compile: g++ mutex.cpp shared_mutex.c -pthread -lstdc++ -pthread -lrt -lm -lasound -o mutex.out
+
 int main()
 {
     shared_mutex_t mutexA = shared_mutex_init("/my-mutexA");
     if (mutexA.ptr == NULL)
     {
         std::cout << "Could not initialise mutex" << std::endl;
-        //return;
     }
     shared_mutex_t mutexB = shared_mutex_init("/my-mutexB");
     if (mutexB.ptr == NULL)
     {
         std::cout << "Could not initialise mutex" << std::endl;
-        //return;
     }
 
     initSharedMemory();
     std::cout << "main" << std::endl;
-    //createProc(processA);
     if (fork() == 0)
     {
         processA(mutexA, mutexB);
@@ -237,7 +211,6 @@ int main()
     }
     std::cout << "main" << std::endl;
     sleep(3);
-    //createProc(processB);
     if (fork() == 0)
     {
         processB(mutexA, mutexB);
@@ -248,12 +221,6 @@ int main()
     while (wait(NULL) > 0)
     {
     }
-
-    //shared_mutex_close(mutex);
-    //shared_mutex_destroy(mutex);
-
-    //shared_mutex_close(mutex);
-    //shared_mutex_destroy(mutex);
 
     return 0;
 }
